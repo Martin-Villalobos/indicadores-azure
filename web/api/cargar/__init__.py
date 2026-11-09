@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 from datetime import datetime
@@ -16,7 +17,6 @@ from pathlib import Path
 from urllib.parse import quote
 
 import azure.functions as func
-from azure.storage.blob import BlobServiceClient
 
 
 # Tipos que se pueden subir desde la web (deben existir en src/indicadores_azure/lectores).
@@ -25,6 +25,8 @@ TAMANO_MAXIMO = 50 * 1024 * 1024
 
 
 def _contenedor():
+    from azure.storage.blob import BlobServiceClient
+
     servicio = BlobServiceClient.from_connection_string(os.environ["BLOB_CONNECTION_STRING"])
     contenedor = servicio.get_container_client(os.getenv("BLOB_CONTAINER", "cargas"))
     if not contenedor.exists():
@@ -57,7 +59,7 @@ def _respuesta(datos: dict, status: int) -> func.HttpResponse:
     return func.HttpResponse(json.dumps(datos, ensure_ascii=False), status_code=status, mimetype="application/json")
 
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+def _main(req: func.HttpRequest) -> func.HttpResponse:
     tipo = (req.params.get("tipo") or "").lower()
     if tipo not in TIPOS:
         return _respuesta({"estado": "ERROR", "mensaje": f"Tipo no soportado: {tipo or '(vacío)'}"}, 400)
@@ -83,3 +85,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         },
     )
     return _respuesta({"estado": "RECIBIDO", "archivo": original or nombre, "blob": blob}, 202)
+
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    # Un error no controlado haría que Azure responda 500 vacío; así la web muestra el motivo.
+    try:
+        return _main(req)
+    except KeyError as exc:
+        return _respuesta({"estado": "ERROR", "mensaje": f"Falta la variable de entorno {exc} en la Static Web App."}, 500)
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Error en la API")
+        return _respuesta({"estado": "ERROR", "mensaje": f"Error del servidor: {exc.__class__.__name__}: {exc}"}, 500)

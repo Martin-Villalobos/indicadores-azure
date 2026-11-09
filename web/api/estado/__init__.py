@@ -7,12 +7,11 @@ GET /api/estado?blob=<tipo>/entrada/<nombre>
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 
 import azure.functions as func
-from azure.core.exceptions import ResourceNotFoundError
-from azure.storage.blob import BlobServiceClient
 
 
 PATRON = re.compile(r"^(?P<tipo>[a-z0-9_]+)/entrada/(?P<nombre>[^/]+)$")
@@ -22,7 +21,10 @@ def _respuesta(datos: dict, status: int = 200) -> func.HttpResponse:
     return func.HttpResponse(json.dumps(datos, ensure_ascii=False), status_code=status, mimetype="application/json")
 
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+def _main(req: func.HttpRequest) -> func.HttpResponse:
+    from azure.core.exceptions import ResourceNotFoundError
+    from azure.storage.blob import BlobServiceClient
+
     coincide = PATRON.match(req.params.get("blob") or "")
     if not coincide:
         return _respuesta({"estado": "ERROR", "mensaje": "Parámetro blob inválido"}, 400)
@@ -59,3 +61,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return _respuesta({"estado": "PROCESANDO"})
 
     return _respuesta({"estado": "DESCONOCIDO", "mensaje": "No se encontró el archivo en el blob."}, 404)
+
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    # Un error no controlado haría que Azure responda 500 vacío; así la web muestra el motivo.
+    try:
+        return _main(req)
+    except KeyError as exc:
+        return _respuesta({"estado": "ERROR", "mensaje": f"Falta la variable de entorno {exc} en la Static Web App."}, 500)
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Error en la API")
+        return _respuesta({"estado": "ERROR", "mensaje": f"Error del servidor: {exc.__class__.__name__}: {exc}"}, 500)
