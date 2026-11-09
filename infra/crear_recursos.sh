@@ -7,6 +7,8 @@ set -euo pipefail
 
 RG=${RG:-rg-prueba-indicadores}
 LOC=${LOC:-chilecentral}
+# ACR Tasks (az acr build) no existe en chilecentral: el registro va en Brasil.
+ACR_LOC=${ACR_LOC:-brazilsouth}
 ST=${ST:-stindicadoresprueba}
 CONTAINER=${CONTAINER:-cargas}
 QUEUE=${QUEUE:-cargas-nuevas}
@@ -29,7 +31,7 @@ done
 echo "== Almacenamiento y cola"
 az storage account create -g "$RG" -n "$ST" -l "$LOC" --sku Standard_LRS --kind StorageV2 \
   --min-tls-version TLS1_2 --allow-blob-public-access false -o none
-CONN=$(az storage account show-connection-string -g "$RG" -n "$ST" -o tsv)
+CONN=$(az storage account show-connection-string -g "$RG" -n "$ST" -o tsv 2>/dev/null)
 az storage container create --name "$CONTAINER" --connection-string "$CONN" -o none
 az storage queue create --name "$QUEUE" --connection-string "$CONN" -o none
 
@@ -42,15 +44,26 @@ az eventgrid event-subscription create --name cargas-entrada --source-resource-i
   --advanced-filter subject StringContains /entrada/ -o none
 
 echo "== Imagen del job"
-az acr show -g "$RG" -n "$ACR" -o none 2>/dev/null || \
-  az acr create -g "$RG" -n "$ACR" --sku Basic --admin-enabled true -o none
+ACR_ACTUAL=$(az acr show -g "$RG" -n "$ACR" --query location -o tsv 2>/dev/null || true)
+if [ -z "$ACR_ACTUAL" ]; then
+  az acr create -g "$RG" -n "$ACR" -l "$ACR_LOC" --sku Basic --admin-enabled true -o none
+elif [ "$ACR_ACTUAL" != "$ACR_LOC" ]; then
+  echo "El registro $ACR está en $ACR_ACTUAL y ahí no se puede usar 'az acr build'." >&2
+  echo "Bórralo (az acr delete -g $RG -n $ACR --yes) y vuelve a correr el script." >&2
+  exit 1
+fi
 az acr build -r "$ACR" -t "indicadores-job:$TAG" -f docker/Dockerfile .
 IMAGE="$ACR.azurecr.io/indicadores-job:$TAG"
 
 echo "== Entorno y job"
 az extension add -n containerapp --upgrade -y
+# Container Apps puede no estar disponible en $LOC: si no, usa Brasil.
+APP_LOC=${APP_LOC:-$(az provider show -n Microsoft.App \
+  --query "resourceTypes[?resourceType=='managedEnvironments'].locations[]" -o tsv \
+  | tr -d ' ' | tr '[:upper:]' '[:lower:]' | grep -qx "$LOC" && echo "$LOC" || echo brazilsouth)}
+echo "Entorno de Container Apps en: $APP_LOC"
 az containerapp env show -g "$RG" -n "$ENV_NAME" -o none 2>/dev/null || \
-  az containerapp env create -g "$RG" -n "$ENV_NAME" -l "$LOC" -o none
+  az containerapp env create -g "$RG" -n "$ENV_NAME" -l "$APP_LOC" -o none
 
 if az containerapp job show -g "$RG" -n "$JOB" -o none 2>/dev/null; then
   az containerapp job update -g "$RG" -n "$JOB" --image "$IMAGE" -o none

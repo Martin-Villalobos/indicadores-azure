@@ -31,7 +31,7 @@ read -s DB_PASSWORD && export DB_PASSWORD
 bash infra/crear_recursos.sh
 ```
 
-El script crea la cuenta de almacenamiento, el contenedor `cargas`, la cola, el aviso Event Grid de cada archivo nuevo en `<tipo>/entrada/`, el registro de contenedores, construye la imagen y crea el job. Si `chilecentral` no ofrece Container Apps, correrlo con `LOC=brazilsouth`.
+El script crea la cuenta de almacenamiento, el contenedor `cargas`, la cola, el aviso Event Grid de cada archivo nuevo en `<tipo>/entrada/`, el registro de contenedores, construye la imagen y crea el job. El registro de contenedores queda en `brazilsouth` porque `az acr build` no existe en Chile Central, y el entorno del job también si Container Apps no está disponible en Chile Central.
 
 Volver a correrlo después de cambiar el código construye una imagen nueva y actualiza el job.
 
