@@ -1,0 +1,15 @@
+{
+  "platform": {
+    "apiRuntime": "python:3.11"
+  },
+  "routes": [
+    { "route": "/.auth/login/github", "statusCode": 404 },
+    { "route": "/.auth/login/twitter", "statusCode": 404 },
+    { "route": "/sin-acceso.html", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/*", "allowedRoles": ["empleado"] }
+  ],
+  "responseOverrides": {
+    "401": { "redirect": "/.auth/login/aad?post_login_redirect_uri=/", "statusCode": 302 },
+    "403": { "rewrite": "/sin-acceso.html", "statusCode": 403 }
+  }
+}

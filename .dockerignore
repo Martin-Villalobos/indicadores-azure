@@ -1,0 +1,11 @@
+.git/
+.venv/
+venv/
+web/
+local/
+infra/
+docs/
+tests/
+**/__pycache__/
+.env
+.env.*
