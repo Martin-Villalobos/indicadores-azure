@@ -31,9 +31,15 @@ read -s DB_PASSWORD && export DB_PASSWORD
 bash infra/crear_recursos.sh
 ```
 
-El script crea la cuenta de almacenamiento, el contenedor `cargas`, la cola, el aviso Event Grid de cada archivo nuevo en `<tipo>/entrada/`, el registro de contenedores, construye la imagen y crea el job. El registro de contenedores queda en `brazilsouth` porque `az acr build` no existe en Chile Central, y el entorno del job también si Container Apps no está disponible en Chile Central.
+El script crea la cuenta de almacenamiento, el contenedor `cargas`, la cola, el aviso Event Grid de cada archivo nuevo en `<tipo>/entrada/`, el registro de contenedores, el entorno y el job. El entorno del job queda en Brasil Sur si Container Apps no está disponible en Chile Central.
 
-Volver a correrlo después de cambiar el código construye una imagen nueva y actualiza el job.
+**La imagen del job la construye GitHub Actions**, porque la suscripción de prueba no permite `az acr build`. La primera vez el script se detiene y pide:
+
+1. En GitHub → repo → **Settings → Secrets and variables → Actions**: variable `ACR_NAME` = `acrindicadoresprueba`; secretos `ACR_USERNAME` = `acrindicadoresprueba` y `ACR_PASSWORD` = la clave de `az acr credential show -n acrindicadoresprueba --query "passwords[0].value" -o tsv`.
+2. Pestaña **Actions → job → Run workflow** en `main`, y esperar el check verde.
+3. Volver a correr el script.
+
+Desde ahí, cada push a `main` corre las pruebas y publica una imagen nueva. Para que el job la use, copiar el comando `az containerapp job update ...` que aparece en el resumen de la corrida en Actions.
 
 - El job tiene `--max-executions 1`, así que nunca corren dos cargas a la vez.
 - Correrlo a mano (por ejemplo para reprocesar): `az containerapp job start -g rg-prueba-indicadores -n job-cargas`.

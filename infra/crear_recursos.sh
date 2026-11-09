@@ -2,20 +2,19 @@
 # Crea almacenamiento, cola, aviso Event Grid, registro de contenedores y el job.
 # Correr en Azure Cloud Shell (Bash) desde la raíz del repo:
 #   DB_PASSWORD='...' bash infra/crear_recursos.sh
-# Es idempotente en lo posible: volver a correrlo actualiza la imagen del job.
+# Se puede volver a correr: lo que ya existe no se duplica.
 set -euo pipefail
 
 RG=${RG:-rg-prueba-indicadores}
 LOC=${LOC:-chilecentral}
-# ACR Tasks (az acr build) no existe en chilecentral: el registro va en Brasil.
-ACR_LOC=${ACR_LOC:-brazilsouth}
+ACR_LOC=${ACR_LOC:-$LOC}
 ST=${ST:-stindicadoresprueba}
 CONTAINER=${CONTAINER:-cargas}
 QUEUE=${QUEUE:-cargas-nuevas}
 ACR=${ACR:-acrindicadoresprueba}
 ENV_NAME=${ENV_NAME:-cae-indicadores}
 JOB=${JOB:-job-cargas}
-TAG=${TAG:-$(date +%Y%m%d%H%M)}
+TAG=${TAG:-latest}
 DB_HOST=${DB_HOST:-mysql-prueba-indicadores.mysql.database.azure.com}
 DB_USER=${DB_USER:-mvillalobos}
 DB_NAME=${DB_NAME:-indicadores_bi}
@@ -43,17 +42,26 @@ az eventgrid event-subscription create --name cargas-entrada --source-resource-i
   --subject-begins-with "/blobServices/default/containers/$CONTAINER/blobs/" \
   --advanced-filter subject StringContains /entrada/ -o none
 
-echo "== Imagen del job"
+echo "== Registro de contenedores"
 ACR_ACTUAL=$(az acr show -g "$RG" -n "$ACR" --query location -o tsv 2>/dev/null || true)
-if [ -z "$ACR_ACTUAL" ]; then
-  az acr create -g "$RG" -n "$ACR" -l "$ACR_LOC" --sku Basic --admin-enabled true -o none
-elif [ "$ACR_ACTUAL" != "$ACR_LOC" ]; then
-  echo "El registro $ACR está en $ACR_ACTUAL y ahí no se puede usar 'az acr build'." >&2
-  echo "Bórralo (az acr delete -g $RG -n $ACR --yes) y vuelve a correr el script." >&2
+[ -n "$ACR_ACTUAL" ] || az acr create -g "$RG" -n "$ACR" -l "$ACR_LOC" --sku Basic --admin-enabled true -o none
+
+# La suscripción de prueba no permite "az acr build": la imagen la construye
+# GitHub Actions (.github/workflows/job.yml) y la sube a este registro.
+IMAGE="$ACR.azurecr.io/indicadores-job:${TAG}"
+if ! az acr repository show -n "$ACR" --image "indicadores-job:${TAG}" -o none 2>/dev/null; then
+  cat >&2 <<MSG
+
+Falta la imagen $IMAGE en el registro. Una vez:
+  1. En GitHub, repo indicadores-azure → Settings → Secrets and variables → Actions:
+       Variable  ACR_NAME     = $ACR
+       Secret    ACR_USERNAME = $ACR
+       Secret    ACR_PASSWORD = (la clave que entrega: az acr credential show -n $ACR --query "passwords[0].value" -o tsv)
+  2. Pestaña Actions → workflow "job" → Run workflow (rama main), y esperar el check verde.
+  3. Volver a correr este script.
+MSG
   exit 1
 fi
-az acr build -r "$ACR" -t "indicadores-job:$TAG" -f docker/Dockerfile .
-IMAGE="$ACR.azurecr.io/indicadores-job:$TAG"
 
 echo "== Entorno y job"
 az extension add -n containerapp --upgrade -y

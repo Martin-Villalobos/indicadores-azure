@@ -1,0 +1,52 @@
+# Pruebas en cada push / pull request y, en main, imagen del job al registro de Azure.
+# (La suscripción de prueba no permite "az acr build", así que la imagen se construye aquí.)
+#
+# Configurar una vez en GitHub → Settings → Secrets and variables → Actions:
+#   Variables: ACR_NAME      (ej. acrindicadoresprueba)
+#   Secrets:   ACR_USERNAME, ACR_PASSWORD  (az acr credential show -n <acr>)
+name: job
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[test]"
+      - run: pytest -q
+
+  imagen:
+    needs: pruebas
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.ACR_NAME != ''
+    runs-on: ubuntu-latest
+    env:
+      REGISTRO: ${{ vars.ACR_NAME }}.azurecr.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRO }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/indicadores-job:${{ github.sha }}
+            ${{ env.REGISTRO }}/indicadores-job:latest
+      - run: |
+          echo "Imagen publicada: $REGISTRO/indicadores-job:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Para usarla: az containerapp job update -g rg-prueba-indicadores -n job-cargas --image $REGISTRO/indicadores-job:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
