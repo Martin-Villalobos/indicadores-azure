@@ -49,11 +49,13 @@ Desde ahí, cada push a `main` corre las pruebas y publica una imagen nueva. Par
 
 En la Static Web App → **Configuración → Variables de entorno** (Producción): `BLOB_CONNECTION_STRING` = la cadena de la cuenta (`az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv`) y `BLOB_CONTAINER` = `cargas`.
 
-Desde la raíz del repo (no desde dentro de `web/`, o falla con "Current directory cannot be identical to or contained within artifact folders"):
+Desde la raíz del repo en Cloud Shell:
 
 ```
-npx -y @azure/static-web-apps-cli deploy ./web/app --api-location ./web/api --api-language python --api-version 3.11 --deployment-token TU_TOKEN --env production
+bash web/publicar.sh
 ```
+
+Pide el token sin mostrarlo. El script empaqueta las dependencias de la API (`swa deploy` no las instala; sin ellas `/api/cargar` responde 500) y publica.
 
 No usar el PC con Windows: el CLI falla con la "í" de `C:\Users\MartínVillalobos`. El token está en la app → **Información general → Administrar token de implementación**; no pegarlo en chats y, si se filtra, **Restablecer token**.
 
