@@ -19,6 +19,13 @@ DB_USER=${DB_USER:-mvillalobos}
 DB_NAME=${DB_NAME:-indicadores_bi}
 : "${DB_PASSWORD:?Define DB_PASSWORD antes de correr el script}"
 
+echo "== Suscripción: $(az account show --query name -o tsv)"
+# En suscripciones nuevas los proveedores no vienen registrados; sin esto
+# "az storage account create" responde SubscriptionNotFound.
+for p in Microsoft.Storage Microsoft.EventGrid Microsoft.ContainerRegistry Microsoft.App Microsoft.OperationalInsights; do
+  az provider register -n "$p" --wait
+done
+
 echo "== Almacenamiento y cola"
 az storage account create -g "$RG" -n "$ST" -l "$LOC" --sku Standard_LRS --kind StorageV2 \
   --min-tls-version TLS1_2 --allow-blob-public-access false -o none
@@ -27,7 +34,6 @@ az storage container create --name "$CONTAINER" --connection-string "$CONN" -o n
 az storage queue create --name "$QUEUE" --connection-string "$CONN" -o none
 
 echo "== Aviso de archivos nuevos (Event Grid -> cola)"
-az provider register -n Microsoft.EventGrid --wait
 STID=$(az storage account show -g "$RG" -n "$ST" --query id -o tsv)
 az eventgrid event-subscription create --name cargas-entrada --source-resource-id "$STID" \
   --endpoint-type storagequeue --endpoint "$STID/queueservices/default/queues/$QUEUE" \
@@ -43,8 +49,6 @@ IMAGE="$ACR.azurecr.io/indicadores-job:$TAG"
 
 echo "== Entorno y job"
 az extension add -n containerapp --upgrade -y
-az provider register -n Microsoft.App --wait
-az provider register -n Microsoft.OperationalInsights --wait
 az containerapp env show -g "$RG" -n "$ENV_NAME" -o none 2>/dev/null || \
   az containerapp env create -g "$RG" -n "$ENV_NAME" -l "$LOC" -o none
 
