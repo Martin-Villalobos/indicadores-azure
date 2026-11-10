@@ -82,7 +82,7 @@ La máquina ya tiene el espejo FTP (`syndirectory.sh` con lftp en `/data/ftpmirr
 **Credencial**, un SAS del contenedor que sólo permite crear y escribir (Cloud Shell):
 
 ```
-az storage container generate-sas --name cargas --permissions acwl --expiry 2027-11-10 \
+az storage container generate-sas --name cargas --permissions racwl --expiry 2027-11-10 \
   --connection-string "$(az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv)" -o tsv
 ```
 
@@ -102,7 +102,7 @@ Luego, con `crontab -e` del mismo usuario que corre `syndirectory.sh`:
 ```
 
 - Para volver a subir un archivo: borrar su línea en `~/.subir_azure/<nombre>.subidos`.
-- Si rclone reclama permisos, generar el SAS con `racwl`.
+- El SAS necesita lectura (`r`) porque rclone revisa la ruta destino antes de subir; no permite borrar.
 - Sólo necesita salida HTTPS (443); no hay que abrir puertos hacia la máquina.
 
 ## Dar acceso a una persona a la web

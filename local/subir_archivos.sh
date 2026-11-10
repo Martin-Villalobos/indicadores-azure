@@ -4,7 +4,7 @@
 # se borran (lftp los volvería a bajar); se anota en un registro local qué ya se subió.
 #
 # Requisitos (una vez):
-#   - rclone instalado y el remoto "azcargas" creado con un SAS de sólo escritura
+#   - rclone instalado y el remoto "azcargas" creado con un SAS de lectura y escritura sin borrado (racwl)
 #     (ver docs/DESPLIEGUE.md, paso 5).
 # Programar con cron cada 5 minutos, por ejemplo:
 #   */5 * * * * /opt/indicadores-azure/subir_archivos.sh >> /var/log/subir_azure.log 2>&1
