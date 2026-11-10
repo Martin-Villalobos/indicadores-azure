@@ -19,8 +19,11 @@
     .card { background:var(--card); border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:16px; }
     .card h2 { margin:0 0 4px; font-size:1.05rem; }
     .card p { margin:0 0 12px; color:var(--muted); font-size:.9rem; }
-    .report { position:relative; width:100%; padding-top:56.25%; }
-    .report iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+    /* La barra inferior de "Publicar en la web" (compartir, pantalla completa, logo) queda
+       fuera del recuadro: el iframe es más alto que el contenedor y se recorta. */
+    .report { position:relative; width:100%; padding-top:56.25%; overflow:hidden; }
+    .report iframe { position:absolute; top:0; left:0; width:100%; height:calc(100% + var(--barra-pbi)); border:0; }
+    :root { --barra-pbi: 40px; }
     [hidden] { display:none !important; }
     form { display:grid; gap:14px; max-width:560px; }
     label { display:grid; gap:6px; font-size:.9rem; font-weight:600; }
@@ -66,28 +69,13 @@
   <footer>Datos de prueba · se actualizan al republicar el reporte</footer>
 
   <script>
-    // ===== Edita solo esta lista =====
-    // url: el enlace de "Publicar en la web" de cada reporte.
-    // Para abrir una página concreta del mismo reporte, agrega &pageName=ReportSectionXXXX
-    const DASHBOARDS = [
-      {
-        nombre: "IP del mes",
-        descripcion: "Índice de puntualidad por expedición.",
-        url: "https://app.powerbi.com/view?r=eyJrIjoiMWQyOGQ0MmEtN2VlZi00OGMyLThlMWEtYzk3ODgzNzQ5OWRiIiwidCI6ImQ1NzFiM2Q1LTRkNGItNDRkMy04ZGM3LWZkODkyZjQ1NTQ2OCIsImMiOjR9"
-      },
-      {
-        nombre: "IE",
-        descripcion: "Pega aquí el enlace del reporte de IE.",
-        url: ""
-      }
-    ];
-    // =================================
-
-    const PESTANAS = [...DASHBOARDS.map(d => ({ ...d, tipo: "reporte" })), { nombre: "Cargar archivos", tipo: "carga" }];
+    // Los dashboards (nombre, descripción y enlace) los entrega /api/dashboards sólo a usuarios
+    // con login. Se configuran en la Static Web App → Variables de entorno → DASHBOARDS.
     const nav = document.getElementById("pestanas");
     const iframe = document.getElementById("reporte");
     const panelReporte = document.getElementById("panel-reporte");
     const panelCarga = document.getElementById("panel-carga");
+    let PESTANAS = [];
 
     function mostrar(i) {
       const p = PESTANAS[i];
@@ -103,16 +91,33 @@
       history.replaceState(null, "", "#" + i);
     }
 
-    PESTANAS.forEach((p, i) => {
-      const b = document.createElement("button");
-      b.role = "tab";
-      b.textContent = p.nombre;
-      b.onclick = () => mostrar(i);
-      nav.appendChild(b);
-    });
+    function armarPestanas(dashboards) {
+      PESTANAS = [...dashboards.map(d => ({ ...d, tipo: "reporte" })), { nombre: "Cargar archivos", tipo: "carga" }];
+      nav.replaceChildren();
+      PESTANAS.forEach((p, i) => {
+        const b = document.createElement("button");
+        b.role = "tab";
+        b.textContent = p.nombre;
+        b.onclick = () => mostrar(i);
+        nav.appendChild(b);
+      });
+      const inicial = parseInt(location.hash.slice(1), 10);
+      mostrar(Number.isInteger(inicial) && PESTANAS[inicial] ? inicial : 0);
+    }
 
-    const inicial = parseInt(location.hash.slice(1), 10);
-    mostrar(Number.isInteger(inicial) && PESTANAS[inicial] ? inicial : 0);
+    fetch("/api/dashboards", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.mensaje || r.status))))
+      .then(armarPestanas)
+      .catch(err => {
+        armarPestanas([]);
+        const aviso = document.createElement("p");
+        aviso.className = "resultado err";
+        aviso.textContent = "No se pudieron cargar los dashboards: " + err.message;
+        panelCarga.prepend(aviso);
+      });
+
+    // El clic derecho sobre la página no ofrece "abrir marco en otra pestaña".
+    document.addEventListener("contextmenu", e => e.preventDefault());
 
     fetch("/.auth/me").then(r => r.json()).then(j => {
       if (j.clientPrincipal) document.getElementById("usuario").textContent = j.clientPrincipal.userDetails;
