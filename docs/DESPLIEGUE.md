@@ -68,28 +68,40 @@ En la web, pestaña **Cargar archivos**, subir un Anexo 1. En menos de un minuto
 
 Subir el mismo archivo otra vez responde "ya se había cargado" sin duplicar filas. Un archivo con error no deja filas a medias.
 
-## 5. Máquina local: Reporte 117 y Velocidades con rclone
+## 5. Máquina local (Linux): Reporte 1.117 y Velocidades con rclone
 
 > Los lectores de `reporte117` y `velocidades` todavía no están en el job. Mientras tanto los archivos llegan a `<tipo>/entrada/` y esperan ahí.
 
-Credencial: un SAS del contenedor que sólo permite crear y escribir, con vencimiento:
+La máquina ya tiene el espejo FTP (`syndirectory.sh` con lftp en `/data/ftpmirror/...`). `local/subir_archivos.sh` toma de ese espejo lo nuevo y lo copia al blob, con la misma lógica que `copyToServer.sh`:
+
+- Reporte 1.117: los `.zip` de `/data/ftpmirror/sonda/OUT/Reporte_1.117`.
+- Velocidades: los `.xlsx` fuera de línea (`*OFF*`) y los en línea (`*ON*`) que todavía no tienen su versión fuera de línea.
+- No mueve ni borra nada del espejo (lftp los volvería a bajar). Lo ya subido queda anotado en `~/.subir_azure/*.subidos`.
+- Sólo considera archivos modificados desde `DESDE` (por defecto 2026-11-01) y con más de 2 minutos sin cambios.
+
+**Credencial**, un SAS del contenedor que sólo permite crear y escribir (Cloud Shell):
 
 ```
-az storage container generate-sas --name cargas --permissions acwl --expiry 2027-11-09 \
+az storage container generate-sas --name cargas --permissions acwl --expiry 2027-11-10 \
   --connection-string "$(az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv)" -o tsv
 ```
 
-En la máquina local (una vez), con rclone instalado:
+**En la máquina local** (una vez):
 
 ```
+sudo -v && curl https://rclone.org/install.sh | sudo bash
 rclone config create azcargas azureblob sas_url "https://stindicadoresprueba.blob.core.windows.net/cargas?SAS_DEL_PASO_ANTERIOR"
+sudo mkdir -p /opt/indicadores-azure && sudo cp subir_archivos.sh /opt/indicadores-azure/ && sudo chmod 755 /opt/indicadores-azure/subir_archivos.sh
+/opt/indicadores-azure/subir_archivos.sh        # primera corrida a mano
 ```
 
-Luego ajustar las rutas en `local/subir_archivos.ps1` (Windows) o `local/subir_archivos.sh` (Linux) y programarlo cada 5 minutos (Programador de tareas o cron).
+Luego, con `crontab -e` del mismo usuario que corre `syndirectory.sh`:
 
-- `move` borra el archivo local sólo si la subida terminó bien.
-- `--min-age 2m` evita subir un archivo que todavía se está escribiendo.
-- Si otro proceso local también necesita esos archivos, que los copie a una carpeta "salida" y rclone mueva desde ahí.
+```
+*/5 * * * * /opt/indicadores-azure/subir_archivos.sh >> $HOME/subir_azure.log 2>&1
+```
+
+- Para volver a subir un archivo: borrar su línea en `~/.subir_azure/<nombre>.subidos`.
 - Si rclone reclama permisos, generar el SAS con `racwl`.
 - Sólo necesita salida HTTPS (443); no hay que abrir puertos hacia la máquina.
 
