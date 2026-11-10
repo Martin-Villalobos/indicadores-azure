@@ -1,9 +1,14 @@
-# Pruebas en cada push / pull request y, en main, imagen del job al registro de Azure.
+# Pruebas en cada push / pull request y, en main, imagen del job al registro de Azure
+# y actualización del Container Apps Job para que use la imagen nueva.
 # (La suscripción de prueba no permite "az acr build", así que la imagen se construye aquí.)
 #
 # Configurar una vez en GitHub → Settings → Secrets and variables → Actions:
 #   Variables: ACR_NAME      (ej. acrindicadoresprueba)
 #   Secrets:   ACR_USERNAME, ACR_PASSWORD  (az acr credential show -n <acr>)
+#              AZURE_CREDENTIALS (opcional; sin él la imagen se publica pero el job no
+#                se actualiza solo). Se obtiene en Cloud Shell con:
+#                az ad sp create-for-rbac -n github-indicadores-azure --role contributor \
+#                  --scopes $(az group show -n rg-prueba-indicadores --query id -o tsv) --json-auth
 name: job
 
 on:
@@ -49,4 +54,26 @@ jobs:
             ${{ env.REGISTRO }}/indicadores-job:latest
       - run: |
           echo "Imagen publicada: $REGISTRO/indicadores-job:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Para usarla: az containerapp job update -g rg-prueba-indicadores -n job-cargas --image $REGISTRO/indicadores-job:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+
+  actualizar-job:
+    needs: imagen
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      IMAGEN: ${{ vars.ACR_NAME }}.azurecr.io/indicadores-job:${{ github.sha }}
+    steps:
+      - name: Sin AZURE_CREDENTIALS, se indica el comando manual
+        if: env.AZURE_CREDENTIALS == ''
+        run: |
+          echo "El job no se actualizó solo (falta el secreto AZURE_CREDENTIALS). Para usar la imagen nueva:" >> "$GITHUB_STEP_SUMMARY"
+          echo "az containerapp job update -g rg-prueba-indicadores -n job-cargas --image $IMAGEN" >> "$GITHUB_STEP_SUMMARY"
+      - uses: azure/login@v2
+        if: env.AZURE_CREDENTIALS != ''
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Actualizar el job a la imagen nueva
+        if: env.AZURE_CREDENTIALS != ''
+        run: |
+          az extension add -n containerapp --upgrade -y --only-show-errors
+          az containerapp job update -g rg-prueba-indicadores -n job-cargas --image "$IMAGEN" -o none
+          echo "Job actualizado a $IMAGEN" >> "$GITHUB_STEP_SUMMARY"

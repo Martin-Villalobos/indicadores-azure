@@ -49,13 +49,9 @@ Desde ahí, cada push a `main` corre las pruebas y publica una imagen nueva. Par
 
 En la Static Web App → **Configuración → Variables de entorno** (Producción): `BLOB_CONNECTION_STRING` = la cadena de la cuenta (`az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv`) y `BLOB_CONTAINER` = `cargas`.
 
-Desde la raíz del repo en Cloud Shell:
+**Automático (recomendado):** cada push a `main` que toque `web/` publica la web con GitHub Actions (`.github/workflows/web.yml`). Una vez, en GitHub → **Settings → Secrets and variables → Actions → New repository secret**: `AZURE_STATIC_WEB_APPS_API_TOKEN` = el token de implementación. También se puede correr a mano en **Actions → web → Run workflow**.
 
-```
-bash web/publicar.sh
-```
-
-Pide el token sin mostrarlo. El script empaqueta las dependencias de la API (`swa deploy` no las instala; sin ellas `/api/cargar` responde 500) y publica.
+**A mano**, desde la raíz del repo en Cloud Shell: `bash web/publicar.sh` (pide el token sin mostrarlo y empaqueta las dependencias de la API).
 
 No usar el PC con Windows: el CLI falla con la "í" de `C:\Users\MartínVillalobos`. El token está en la app → **Información general → Administrar token de implementación**; no pegarlo en chats y, si se filtra, **Restablecer token**.
 
