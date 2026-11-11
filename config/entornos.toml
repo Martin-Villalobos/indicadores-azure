@@ -1,0 +1,35 @@
+# Conexiones por entorno. El entorno activo lo elige la variable ENTORNO (dev | prod),
+# que se define en .env o en el sistema. Sin ENTORNO se usa "prod", así el job de Azure
+# sigue igual que antes.
+#
+# Orden de prioridad para cada valor:
+#   1. variable de entorno (DB_HOST, DB_PASSWORD, BLOB_CONNECTION_STRING, ...)
+#   2. la sección del entorno activo en este archivo
+#   3. el valor por defecto del código
+#
+# Las claves de prod NO van aquí: se entregan como variables (secretos del job en Azure,
+# variables de la Static Web App, o .env en el PC). Las de dev sí, porque son de la base
+# y del emulador locales de docker compose, que no tienen datos reales.
+
+[dev]
+db_host = "localhost"
+db_port = 3306
+db_name = "indicadores_bi"
+db_user = "indicadores"
+db_password = "indicadores"
+db_ssl_ca = ""
+# Azurite, el emulador local de Azure Storage. La clave es la pública que trae Azurite.
+blob_connection_string = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;QueueEndpoint=http://localhost:10001/devstoreaccount1;"
+blob_container = "cargas"
+queue_name = ""
+batch_size = 5000
+# Lista de dashboards que muestra la web local (en prod es la variable DASHBOARDS de la Static Web App).
+dashboards = '[{"nombre": "Dashboard de ejemplo (dev)", "descripcion": "Entorno local: en prod aquí van los reportes de Power BI.", "url": "about:blank"}]'
+
+[prod]
+db_host = "mysql-prueba-indicadores.mysql.database.azure.com"
+db_port = 3306
+db_name = "indicadores_bi"
+# db_user, db_password y blob_connection_string: sólo por variables de entorno.
+blob_container = "cargas"
+batch_size = 5000

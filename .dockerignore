@@ -9,3 +9,6 @@ tests/
 **/__pycache__/
 .env
 .env.*
+dev/
+seeds/
+docker-compose.yml
