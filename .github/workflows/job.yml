@@ -1,4 +1,4 @@
-# Pruebas en cada push / pull request y, en main, imagen del job al registro de Azure
+# Pruebas en cada push (main y dev) / pull request y, sólo en main (prod), imagen del job al registro de Azure
 # y actualización del Container Apps Job para que use la imagen nueva.
 # (La suscripción de prueba no permite "az acr build", así que la imagen se construye aquí.)
 #
@@ -13,7 +13,7 @@ name: job
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   workflow_dispatch:
 

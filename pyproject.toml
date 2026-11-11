@@ -17,9 +17,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+# Entorno dev local: la web (dev/servidor_web.py) ejecuta las funciones de web/api.
+dev = ["azure-functions>=1.18", "pytest>=8"]
 
 [project.scripts]
 indicadores-azure-procesar = "indicadores_azure.procesar:main"
+indicadores-azure-semilla = "indicadores_azure.semilla:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

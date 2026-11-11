@@ -112,6 +112,7 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.getLogger("azure").setLevel(logging.WARNING)  # el SDK registra cada petición HTTP
     config = Config.desde_entorno()
     contenedor = _contenedor(config)
     vaciar_cola(config)
