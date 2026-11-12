@@ -3,10 +3,10 @@
 // Ver en vivo: pegar este archivo en https://dbdiagram.io/d
 //
 // Capas:
-//   control   -> qué archivo entró y qué cálculo se corrió con qué entradas
+//   control   -> qué archivo entró, qué rango de fechas rige y qué cálculo se corrió con qué entradas
 //   raw       -> archivos tal como vienen (una tabla por tipo de archivo)
 //   maestros  -> dimensiones compartidas por todos los indicadores
-//   programa  -> lo exigido por el PO / PE (Anexo 3), resuelto por fecha
+//   programa  -> lo exigido por el PO / PE (Anexo 3)
 //   operacion -> lo realizado (expediciones) y los eventos exógenos
 //   icfp      -> detalle propio del ICFP (Contrato 5.3.1.6)
 //   resultado -> tabla genérica de resultados para cualquier indicador
@@ -17,12 +17,23 @@
 //
 // Equivalencias con la base indicadores_bi (indicadores-bi, Python):
 //   control_carga        ~ control_ejecucion
-//   programa             ~ programa_ejecucion + vigencia_programa_ejecucion
+//   tipo_archivo         ~ programa_ejecucion (generalizado a todos los archivos)
+//   vigencia_archivo     ~ vigencia_programa_ejecucion (generalizado a todos los archivos)
 //   programa_periodo     ~ detalle_programacion_periodo (+ programacion_periodo_origen)
 //   expedicion           ~ fact_expedicion
 //   calculo              ~ control_calculo_icf_icp / control_correccion_icf_icp
 //   icfp_sspd            ~ fact_icf_icp_inicial (+ correcciones)
 //   parametro            ~ dim_parametro_ite
+//
+// Reemplazo de archivos y recálculo:
+//   1. Se carga un archivo -> control_carga.
+//   2. Se registra su rango en vigencia_archivo: los tramos vigentes del mismo tipo que se
+//      cruzan quedan vigente = 0 y, si sobraba una parte antes o después, se recrea como tramo
+//      nuevo (igual que registrar_vigencia_programa de indicadores-bi, pero sin borrar historia).
+//   3. Por cada indicador que usa ese tipo (indicador_fuente) se encola el rango en
+//      recalculo_pendiente.
+//   4. El worker corre un calculo nuevo solo para ese rango; las fechas recalculadas pasan a
+//      leerse del calculo nuevo (v_calculo_vigente) y el resto sigue en el anterior.
 
 Project indicadores_azure {
   database_type: 'MySQL'
@@ -45,9 +56,23 @@ Enum estado_calculo {
   REEMPLAZADO
 }
 
+Enum estado_recalculo {
+  PENDIENTE
+  EN_CURSO
+  HECHO
+  ERROR
+}
+
+Table tipo_archivo {
+  codigo varchar(40) [pk, note: 'ANEXO1, ANEXO3, ANEXO4, ANEXO5, VELOCIDADES, EVENTOS_EXOGENOS...']
+  nombre varchar(100) [not null]
+  cobertura varchar(10) [not null, note: 'RANGO (anexos: vigencia del PO/PE) | DIA (velocidades) | MES (exógenos)']
+  Note: 'Catálogo de tipos de archivo. Generaliza programa_ejecucion de indicadores-bi.'
+}
+
 Table control_carga {
   carga_id bigint [pk, increment]
-  tipo_archivo varchar(40) [not null, note: 'ANEXO1, ANEXO3, VELOCIDADES, EVENTOS_EXOGENOS, ...']
+  tipo_archivo varchar(40) [not null, ref: > tipo_archivo.codigo]
   nombre_archivo varchar(255) [not null]
   blob_nombre varchar(400) [not null]
   hash_sha256 char(64) [not null]
@@ -66,6 +91,26 @@ Table control_carga {
   Note: 'Un registro por archivo procesado por el job (tipo + contenido).'
 }
 
+Table vigencia_archivo {
+  vigencia_id bigint [pk, increment]
+  tipo_archivo varchar(40) [not null, ref: > tipo_archivo.codigo]
+  carga_id bigint [not null, ref: > control_carga.carga_id]
+  fecha_inicio date [not null]
+  fecha_termino date [not null]
+  vigente boolean [not null, default: true]
+  reemplazada_por bigint [ref: > control_carga.carga_id, note: 'carga que tapó este tramo']
+  creado_at datetime [not null]
+  reemplazado_at datetime
+
+  indexes {
+    (tipo_archivo, vigente, fecha_inicio, fecha_termino) [name: 'ix_vigencia_rango']
+  }
+  Note: '''Qué carga rige cada fecha, por tipo de archivo. Regla: entre filas vigentes del mismo tipo
+los rangos no se cruzan, así que para (tipo, fecha) hay a lo sumo una carga vigente.
+Un PE de un día parte el PO en dos tramos; recargar un archivo corregido lo reemplaza entero.
+Las filas reemplazadas quedan con vigente = 0 como historia.'''
+}
+
 Table indicador {
   indicador_id smallint [pk, increment]
   codigo varchar(20) [not null, unique, note: 'ICFP, ITE, IE, IP, IPK, ICB, IKB...']
@@ -75,6 +120,30 @@ Table indicador {
   granularidad_base varchar(40) [note: 'p. ej. SSPD = servicio-sentido-periodo-día']
   activo boolean [not null, default: true]
   Note: 'Catálogo de indicadores. Agregar uno nuevo es agregar una fila aquí.'
+}
+
+Table indicador_fuente {
+  indicador_id smallint [ref: > indicador.indicador_id]
+  tipo_archivo varchar(40) [ref: > tipo_archivo.codigo]
+  desfase_dias smallint [not null, default: 0, note: 'p. ej. 1 si el día d usa d-1 y d+1 (trasvasije)']
+
+  indexes {
+    (indicador_id, tipo_archivo) [pk]
+  }
+  Note: 'De qué tipos de archivo depende cada indicador (ICFP: ANEXO3, VELOCIDADES, EVENTOS_EXOGENOS).'
+}
+
+Table recalculo_pendiente {
+  recalculo_id bigint [pk, increment]
+  indicador_id smallint [not null, ref: > indicador.indicador_id]
+  fecha_desde date [not null]
+  fecha_hasta date [not null]
+  motivo_carga_id bigint [ref: > control_carga.carga_id, note: 'archivo nuevo o reemplazado que lo gatilló; NULL = manual']
+  estado estado_recalculo [not null]
+  calculo_id bigint [ref: > calculo.calculo_id, note: 'cálculo que lo resolvió']
+  creado_at datetime [not null]
+  resuelto_at datetime
+  Note: 'Cola de recálculos por rango de fechas. Se llena al registrar una vigencia o a mano.'
 }
 
 Table calculo {
@@ -98,12 +167,14 @@ Table calculo {
 Table calculo_entrada {
   calculo_id bigint [ref: > calculo.calculo_id]
   carga_id bigint [ref: > control_carga.carga_id]
-  rol varchar(40) [not null, note: 'PROGRAMA, VELOCIDADES, EVENTOS...']
+  tipo_archivo varchar(40) [not null, ref: > tipo_archivo.codigo]
+  fecha_inicio date [not null, note: 'tramo de fechas para el que se usó']
+  fecha_termino date [not null]
 
   indexes {
-    (calculo_id, carga_id) [pk]
+    (calculo_id, carga_id, fecha_inicio) [pk]
   }
-  Note: 'Qué archivos entraron a cada cálculo (trazabilidad).'
+  Note: 'Qué carga se usó para qué fechas en cada cálculo. Si hoy vigencia_archivo dice otra cosa para esas fechas, el cálculo quedó obsoleto.'
 }
 
 Table parametro {
@@ -232,7 +303,7 @@ Table dim_fecha {
   dia_semana tinyint [not null]
   tipo_dia_calendario varchar(10) [not null, note: 'LABORAL / SABADO / DOMINGO (feriado = DOMINGO)']
   es_feriado boolean [not null, default: false]
-  Note: 'Calendario. El tipo de día operativo final sale de programa_dia.'
+  Note: 'Calendario. El tipo de día operativo sale de las velocidades del día.'
 }
 
 Table dim_tipologia_bus {
@@ -266,28 +337,9 @@ Table dim_periodo {
 
 // ───────────────────────────── programa ─────────────────────────────
 
-Table programa {
-  programa_id int [pk, increment]
-  carga_id bigint [not null, ref: > control_carga.carga_id]
-  tipo varchar(10) [not null, note: 'PO | PE (programa especial)']
-  vigente_desde date [not null]
-  vigente_hasta date [not null]
-  prioridad smallint [not null, note: 'el de mayor prioridad gana en una fecha']
-  activo boolean [not null, default: true]
-  Note: 'Cada Anexo 3 cargado (PO base o PE de uno o pocos días).'
-}
-
-Table programa_dia {
-  fecha date [pk, ref: > dim_fecha.fecha]
-  programa_id int [not null, ref: > programa.programa_id]
-  tipo_dia varchar(10) [not null, note: 'tipo de día que aplica ese día']
-
-  Note: 'Resuelve qué programa y tipo de día rige cada fecha. Se materializa al cargar un PO/PE.'
-}
-
 Table programa_periodo {
   programa_periodo_id bigint [pk, increment]
-  programa_id int [not null, ref: > programa.programa_id]
+  carga_id bigint [not null, ref: > control_carga.carga_id, note: 'carga del Anexo 3 (PO o PE)']
   servicio_sentido_id int [not null, ref: > dim_servicio_sentido.servicio_sentido_id]
   tipo_dia varchar(10) [not null]
   periodo_id smallint [not null, ref: > dim_periodo.periodo_id]
@@ -296,7 +348,7 @@ Table programa_periodo {
   plazas_programadas int [not null, note: 'Σb pl_prog']
 
   indexes {
-    (programa_id, servicio_sentido_id, tipo_dia, periodo_id) [unique]
+    (carga_id, servicio_sentido_id, tipo_dia, periodo_id) [unique]
   }
   Note: 'Exigencia por servicio-sentido-periodo y tipo de día. Con esquema MH es 1:1 con las filas del Anexo 3.'
 }
@@ -366,7 +418,7 @@ Table icfp_sspd {
   servicio_sentido_id int [ref: > dim_servicio_sentido.servicio_sentido_id]
   periodo_id smallint [ref: > dim_periodo.periodo_id]
   mes date [not null, note: 'desnormalizado para agrupar sin joins']
-  tipo_dia varchar(10) [not null, note: 'el que rigió ese día (programa_dia)']
+  tipo_dia varchar(10) [not null, note: 'el de las velocidades del día']
   terminal_id smallint [not null, ref: > dim_terminal.terminal_id]
   programa_periodo_id bigint [ref: > programa_periodo.programa_periodo_id]
   longitud_km decimal(10,3) [note: 'L s,p,d']
@@ -435,8 +487,15 @@ Table resultado_indicador {
 
 // ───────────────────────────── vistas para Superset ─────────────────────────────
 
+Table v_calculo_vigente {
+  indicador_id smallint
+  fecha date
+  calculo_id bigint [note: 'último calculo OK (PROVISORIO/DEFINITIVO) que cubre esa fecha']
+  Note: 'VISTA: resuelve por fecha, no por mes, para que recalcular un rango no obligue a recalcular todo el mes.'
+}
+
 Table v_icfp_dashboard {
-  calculo_id bigint [note: 'solo el último cálculo DEFINITIVO/PROVISORIO por mes']
+  calculo_id bigint [note: 'el de v_calculo_vigente para cada fecha']
   mes date
   fecha date
   tipo_dia varchar(10)
@@ -473,7 +532,11 @@ Table v_icfp_mes {
 }
 
 TableGroup control {
+  tipo_archivo
   control_carga
+  vigencia_archivo
+  indicador_fuente
+  recalculo_pendiente
   indicador
   calculo
   calculo_entrada
@@ -497,8 +560,6 @@ TableGroup maestros {
 }
 
 TableGroup programa {
-  programa
-  programa_dia
   programa_periodo
   programa_periodo_tipologia
 }
@@ -517,6 +578,7 @@ TableGroup icfp {
 
 TableGroup resultado {
   resultado_indicador
+  v_calculo_vigente
   v_icfp_dashboard
   v_icfp_mes
 }
