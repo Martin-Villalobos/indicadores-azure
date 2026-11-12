@@ -99,6 +99,8 @@ Table vigencia_archivo {
   fecha_termino date [not null]
   vigente boolean [not null, default: true]
   reemplazada_por bigint [ref: > control_carga.carga_id, note: 'carga que tapó este tramo']
+  origen varchar(10) [not null, default: 'CARGA', note: 'CARGA (al subir el archivo) | MANUAL (cambiada desde la web)']
+  creado_por varchar(255) [note: 'usuario de la web si es MANUAL']
   creado_at datetime [not null]
   reemplazado_at datetime
 
@@ -112,7 +114,9 @@ Todos los anexos son iguales; solo cambian sus fechas. Regla al registrar una ca
   - si el rango es igual, gana el cargado después (corrección del mismo anexo).
 Así un anexo de 18-19 sep manda sobre uno de jul-nov aunque el de jul-nov se recargue después.
 Ej.: jul-nov + 18-19 sep -> jul-17sep (jul-nov), 18-19sep (18-19 sep), 20sep-nov (jul-nov).
-Las filas reemplazadas quedan con vigente = 0 como historia.'''
+Las filas reemplazadas quedan con vigente = 0 como historia.
+La web lista las filas vigentes por tipo de archivo (y su historia) y permite reasignar un rango
+a otra carga ya subida: se registra con origen = MANUAL y encola el recálculo igual que una carga.'''
 }
 
 Table indicador {
