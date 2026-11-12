@@ -1,0 +1,28 @@
+-- Anexo 3 tal como viene en el archivo (hoja de parámetros), una fila por media hora.
+CREATE TABLE IF NOT EXISTS raw_anexo3 (
+  id                        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  carga_id                  BIGINT UNSIGNED NOT NULL,
+  numero_fila               INT UNSIGNED NOT NULL,
+  hoja                      VARCHAR(60)  NULL,
+  anio                      SMALLINT     NULL,
+  fecha_inicio              DATE         NOT NULL,
+  fecha_termino             DATE         NOT NULL,
+  unidad_de_servicio        VARCHAR(40)  NOT NULL,
+  codigo_ts_servicio        VARCHAR(20)  NOT NULL,
+  codigo_usuario_servicio   VARCHAR(20)  NOT NULL,
+  sentido                   VARCHAR(20)  NOT NULL,
+  tipo_dia                  VARCHAR(20)  NOT NULL,
+  mh                        TIME         NOT NULL,
+  velocidad_km_hora         DECIMAL(10,4) NULL,
+  distancia_base_km         DECIMAL(12,4) NULL,
+  distancia_total_km        DECIMAL(12,4) NULL,
+  numero_salidas            INT          NOT NULL,
+  capacidad_plazas          INT          NOT NULL,
+  agrupacion_mh             VARCHAR(40)  NULL,
+  familia_servicios         VARCHAR(40)  NULL,
+  indicador_tiempo_espera   VARCHAR(10)  NULL,
+  PRIMARY KEY (id),
+  KEY ix_raw_anexo3_carga (carga_id),
+  KEY ix_raw_anexo3_servicio (codigo_ts_servicio, sentido, tipo_dia, mh),
+  CONSTRAINT fk_raw_anexo3_carga FOREIGN KEY (carga_id) REFERENCES control_carga (carga_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

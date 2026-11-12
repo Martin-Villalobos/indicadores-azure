@@ -63,30 +63,39 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
     nombre = unquote(metadatos.get("nombre_original") or "") or Path(blob_nombre).name
     subido_por = unquote(metadatos.get("subido_por") or "") or "desconocido"
     archivo = blob_nombre.split("/entrada/", 1)[1]
+    # control_carga.blob_nombre guarda dónde queda el archivo al terminar, no la ruta de entrada
+    destino_ok = f"{tipo}/procesados/{archivo}"
+    destino_error = f"{tipo}/errores/{archivo}"
     contenido = contenedor.download_blob(blob_nombre).readall()
     sha256 = hashlib.sha256(contenido).hexdigest()
 
-    try:
+    def filas():
         if Path(nombre).suffix.lower() not in lector.EXTENSIONES:
             raise ErrorDeCarga(
                 f"Extensión no permitida para {tipo}: se espera {', '.join(sorted(lector.EXTENSIONES))}."
             )
+        yield from lector.leer(contenido)
+
+    try:
         resultado = cargar_archivo(
             conn,
             tipo=tipo,
             nombre=nombre,
-            blob=blob_nombre,
+            blob=destino_ok,
+            blob_error=destino_error,
             sha256=sha256,
             subido_por=subido_por,
             tabla=lector.TABLA,
             columnas=lector.COLUMNAS,
-            filas=lector.leer(contenido),
+            filas=filas(),
             batch_size=config.batch_size,
+            vigencia=getattr(lector, "VIGENCIA", None),
+            vigencia_por_mes=getattr(lector, "VIGENCIA_POR_MES", False),
         )
     except Exception as exc:
         mensaje = str(exc) if isinstance(exc, ErrorDeCarga) else f"Error inesperado: {exc.__class__.__name__}: {exc}"
         log.error("ERROR %s: %s", blob_nombre, mensaje)
-        destino = f"{tipo}/errores/{archivo}"
+        destino = destino_error
         _mover(contenedor, blob_nombre, destino, contenido, {**metadatos, "estado": "ERROR"})
         contenedor.get_blob_client(f"{destino}.error.txt").upload_blob(
             f"Archivo: {nombre}\nTipo: {tipo}\nSubido por: {subido_por}\n\n{mensaje}\n".encode("utf-8"),
@@ -97,7 +106,7 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
     _mover(
         contenedor,
         blob_nombre,
-        f"{tipo}/procesados/{archivo}",
+        destino_ok,
         contenido,
         {
             **metadatos,

@@ -20,7 +20,12 @@ import azure.functions as func
 
 
 # Tipos que se pueden subir desde la web (deben existir en src/indicadores_azure/lectores).
-TIPOS = {"anexo1": {".xlsx"}}
+TIPOS = {
+    "anexo1": {".xlsx"},
+    "anexo3": {".xlsx"},
+    "velocidades": {".xlsx"},
+    "exclusiones": {".xlsx"},
+}
 TAMANO_MAXIMO = 50 * 1024 * 1024
 
 

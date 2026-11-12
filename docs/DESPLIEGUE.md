@@ -16,7 +16,7 @@ Todo se hace desde **Azure Cloud Shell (Bash)** con el repo clonado: `git clone 
 
 ## 1. Tablas en MySQL (una vez)
 
-Desde DBeaver (conexión a Azure) ejecutar `sql/01_control_carga.sql` y luego `sql/02_raw_anexo1.sql`. O desde Cloud Shell:
+Desde DBeaver (conexión a Azure) ejecutar los archivos de `sql/` en orden (`01_control_carga.sql`, `02_raw_anexo1.sql`, `03_vigencias.sql`, ...). Todos usan `CREATE TABLE IF NOT EXISTS`, así que se pueden volver a correr cuando se agrega uno nuevo. O desde Cloud Shell:
 
 ```
 for f in sql/*.sql; do mysql -h mysql-prueba-indicadores.mysql.database.azure.com -u mvillalobos -p --ssl-mode=REQUIRED indicadores_bi < "$f"; done
