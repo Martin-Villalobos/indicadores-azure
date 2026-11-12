@@ -26,7 +26,7 @@ import azure.functions as func
 TABLAS = {
     "dim_bus": {
         "nombre": "Flota (buses)",
-        "descripcion": "Plazas por patente para el ICP. Se llena al cargar un archivo de flota; aquí se corrige a mano.",
+        "descripcion": "Plazas por patente para el ICP. Se agrega y corrige aquí, o se carga de una vez con un archivo de flota (opcional).",
         "columnas": [
             ("ppu", "texto", True, "Patente"),
             ("tipo_bus", "texto", False, "Tipo de bus"),
@@ -123,7 +123,8 @@ def _avisar_job(usuario: str) -> None:
     """Deja un aviso en recalculo/entrada/ para que el job resuelva el recálculo pendiente."""
     from azure.storage.blob import BlobServiceClient
 
-    contenedor = BlobServiceClient.from_connection_string(os.environ["BLOB_CONNECTION_STRING"]).get_container_client(
+    contenedor = BlobServiceClient.from_connection_string(
+        os.environ["BLOB_CONNECTION_STRING"], retry_total=0, connection_timeout=5).get_container_client(
         os.getenv("BLOB_CONTAINER", "cargas"))
     nombre = f"recalculo/entrada/{datetime.now():%Y%m%d_%H%M%S_%f}.txt"
     contenedor.get_blob_client(nombre).upload_blob(f"Cambio en datos maestros por {usuario}\n".encode(), overwrite=True)

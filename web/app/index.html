@@ -34,6 +34,10 @@
     .resultado.ok { border-color:var(--ok); color:var(--ok); background:#ecf7ee; }
     .resultado.err { border-color:var(--err); color:var(--err); background:#fdecea; }
     .maestros-barra { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    .maestro-form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; max-width:none; padding:12px; margin-bottom:14px; background:#f7f9fb; border:1px solid var(--line); border-radius:6px; }
+    .maestro-form h3 { flex-basis:100%; margin:0; font-size:.95rem; }
+    .maestro-form label { font-weight:600; }
+    .maestro-form input { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; min-width:160px; }
     .maestros-barra input[type=search] { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; min-width:220px; }
     .boton.sec { background:#fff; color:var(--accent); border:1px solid var(--accent); }
     .tabla-wrap { overflow:auto; max-height:65vh; border:1px solid var(--line); border-radius:6px; }
@@ -89,9 +93,9 @@
       <div class="maestros-barra">
         <select id="maestro-tabla"></select>
         <input type="search" id="maestro-filtro" placeholder="Buscar…">
-        <button class="boton sec" id="maestro-nueva" type="button">+ Agregar fila</button>
         <span id="maestro-cuenta" class="meta"></span>
       </div>
+      <form id="maestro-form" class="maestro-form"></form>
       <div id="maestro-aviso" class="resultado" hidden></div>
       <div class="tabla-wrap"><table class="maestro" id="maestro-grilla"></table></div>
     </section>
@@ -255,6 +259,7 @@
     async function cargarTabla() {
       const t = tablaActual();
       document.getElementById("maestro-descripcion").textContent = t.descripcion;
+      if (formM.dataset.tabla !== t.tabla) { armarFormulario(t); formM.dataset.tabla = t.tabla; }
       avisoMaestro("");
       const d = await leerJson(await fetch(`/api/maestros?tabla=${t.tabla}`, { cache: "no-store" }));
       if (!d.filas) return avisoMaestro(d.mensaje || "Error al leer la tabla.", false);
@@ -301,6 +306,11 @@
         const th = document.createElement("th"); th.textContent = titulo; cab.appendChild(th);
       }
       grilla.replaceChildren(cab, ...visibles.slice(0, 2000).map(f => filaHtml(t, f, false)));
+      if (!visibles.length) {
+        const tr = grilla.insertRow(); const td = tr.insertCell();
+        td.colSpan = t.columnas.length + t.extra.length + 1; td.className = "meta";
+        td.textContent = FILAS.length ? "Ninguna fila coincide con la búsqueda." : "Todavía no hay datos: agrégalos con el formulario de arriba.";
+      }
       document.getElementById("maestro-cuenta").textContent =
         `${visibles.length} de ${FILAS.length} filas` + (visibles.length > 2000 ? " (se muestran 2000; usa la búsqueda)" : "");
     }
@@ -335,12 +345,56 @@
 
     selTabla.onchange = () => { filtro.value = ""; cargarTabla(); };
     filtro.oninput = dibujar;
-    document.getElementById("maestro-nueva").onclick = () => {
+
+    // Formulario para agregar un registro nuevo, armado con las columnas de la tabla.
+    const formM = document.getElementById("maestro-form");
+    const SUGERENCIAS = { tipo_bus: ["A1", "A2", "B1", "B2", "C1", "C2"] };
+
+    function armarFormulario(t) {
+      const titulo = document.createElement("h3");
+      titulo.textContent = "Nuevo registro";
+      const campos = t.columnas.map(c => {
+        const label = document.createElement("label");
+        label.textContent = c.titulo + (c.clave ? " *" : "");
+        const inp = document.createElement("input");
+        inp.name = c.nombre;
+        inp.required = c.clave;
+        if (c.tipo === "entero") { inp.type = "number"; inp.min = 1; inp.step = 1; }
+        if (SUGERENCIAS[c.nombre]) {
+          const lista = document.createElement("datalist");
+          lista.id = "sug-" + c.nombre;
+          lista.append(...SUGERENCIAS[c.nombre].map(v => new Option(v)));
+          inp.setAttribute("list", lista.id);
+          label.append(lista);
+        }
+        label.append(inp);
+        return label;
+      });
+      const boton = document.createElement("button");
+      boton.className = "boton";
+      boton.type = "submit";
+      boton.textContent = "Agregar";
+      formM.replaceChildren(titulo, ...campos, boton);
+    }
+
+    formM.addEventListener("submit", async e => {
+      e.preventDefault();
       const t = tablaActual();
-      const tr = filaHtml(t, {}, true);
-      grilla.firstChild.after(tr);
-      tr.querySelector("input").focus();
-    };
+      const fila = Object.fromEntries(new FormData(formM));
+      const clave = t.columnas[0];
+      const valor = String(fila[clave.nombre] || "").trim();
+      const normal = t.tabla === "dim_bus" ? valor.toUpperCase().replace(/[-\s]/g, "") : valor;
+      if (FILAS.some(f => String(f[clave.nombre]) === normal) &&
+          !confirm(`${clave.titulo} ${normal} ya existe. ¿Reemplazar sus datos?`)) return;
+      const d = await enviar(t, "guardar", fila);
+      if (d.estado !== "OK") return avisoMaestro("✗ " + (d.mensaje || "No se pudo agregar."), false);
+      formM.reset();
+      await cargarTabla();
+      filtro.value = normal;
+      dibujar();
+      avisoMaestro(`✓ ${clave.titulo} ${normal} agregado. ` + d.mensaje.replace(/^Guardado\. /, ""), true);
+      formM.querySelector("input").focus();
+    });
   </script>
 </body>
 </html>
