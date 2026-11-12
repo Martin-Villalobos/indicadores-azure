@@ -59,6 +59,30 @@ def _funcion(nombre: str):
     return _funciones[nombre]
 
 
+def _parametros_ruta(nombre: str, resto: str) -> dict[str, str] | None:
+    """Arma route_params según el "route" de function.json (por ejemplo "reporte/{id}").
+
+    Devuelve None si la ruta pedida no calza con la de la función.
+    """
+
+    try:
+        bindings = json.loads((API / nombre / "function.json").read_text(encoding="utf-8"))["bindings"]
+        plantilla = next(b.get("route", nombre) for b in bindings if b.get("type") == "httpTrigger")
+    except (OSError, ValueError, KeyError, StopIteration):
+        plantilla = nombre
+    esperadas = plantilla.split("/")[1:]
+    pedidas = resto.split("/") if resto else []
+    if len(esperadas) != len(pedidas):
+        return None
+    parametros = {}
+    for esperada, pedida in zip(esperadas, pedidas):
+        if esperada.startswith("{") and esperada.endswith("}"):
+            parametros[esperada[1:-1].split(":")[0].rstrip("?")] = pedida
+        elif esperada != pedida:
+            return None
+    return parametros
+
+
 class Manejador(BaseHTTPRequestHandler):
     server_version = "indicadores-dev"
 
@@ -72,11 +96,13 @@ class Manejador(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(cuerpo)
 
-    def _api(self, nombre: str, consulta: str):
+    def _api(self, ruta: str, consulta: str):
         import azure.functions as func
 
+        nombre, _, resto = ruta.partition("/")
         funcion = _funcion(nombre)
-        if funcion is None:
+        parametros = _parametros_ruta(nombre, resto)
+        if funcion is None or parametros is None:
             return self._enviar(404, b'{"mensaje": "API no encontrada"}')
         largo = int(self.headers.get("Content-Length") or 0)
         cabeceras = {k.lower(): v for k, v in self.headers.items()}
@@ -86,7 +112,7 @@ class Manejador(BaseHTTPRequestHandler):
             url=f"http://{self.headers.get('Host', 'localhost')}{self.path}",
             headers=cabeceras,
             params=dict(parse_qsl(consulta)),
-            route_params={},
+            route_params=parametros,
             body=self.rfile.read(largo) if largo else b"",
         )
         resp = funcion(req)

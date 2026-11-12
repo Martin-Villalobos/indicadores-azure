@@ -107,7 +107,7 @@ App → **Administración de roles → Invitar**: proveedor Microsoft Entra ID, 
 
 ## Dashboards
 
-Los enlaces no están en el código: la página los pide a `/api/dashboards`, que sólo responde a usuarios con login. Se configuran en la Static Web App → **Configuración → Variables de entorno** → `DASHBOARDS`, con un JSON en una sola línea:
+Los enlaces no están en el código ni llegan a la página: `/api/dashboards` sólo entrega nombre, descripción y un número, y el iframe abre `/api/reporte/<número>`, que redirige (302) al enlace de Power BI. Las dos rutas sólo responden a usuarios con login. Se configuran en la Static Web App → **Configuración → Variables de entorno** → `DASHBOARDS`, con un JSON en una sola línea:
 
 ```
 [{"nombre":"IP del mes","descripcion":"Índice de puntualidad por expedición.","url":"https://app.powerbi.com/view?r=..."},{"nombre":"IE","descripcion":"...","url":"https://app.powerbi.com/view?r=..."}]
@@ -115,7 +115,7 @@ Los enlaces no están en el código: la página los pide a `/api/dashboards`, qu
 
 Cambiar la variable no requiere volver a publicar la web. `&pageName=ReportSectionXXXX` en la URL abre una página concreta del reporte.
 
-La página recorta la barra inferior de Power BI (compartir, pantalla completa, logo) y desactiva el clic derecho. Esto dificulta copiar el enlace, pero no lo impide: un usuario con login puede verlo con las herramientas del navegador (F12). Si un enlace se filtra, en app.powerbi.com → ⚙ → **Administrar códigos para insertar** se elimina y se genera uno nuevo.
+La página recorta la barra inferior de Power BI (compartir, pantalla completa, logo) y desactiva el clic derecho. Esto dificulta copiar el enlace, pero no lo impide: un usuario con login puede verlo en la pestaña Red de las herramientas del navegador (F12), porque el navegador sigue la redirección. Si un enlace se filtra, en app.powerbi.com → ⚙ → **Administrar códigos para insertar** se elimina y se genera uno nuevo.
 
 ## Dominio propio (pendiente)
 

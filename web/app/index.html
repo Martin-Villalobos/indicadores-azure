@@ -69,8 +69,9 @@
   <footer>Datos de prueba · se actualizan al republicar el reporte</footer>
 
   <script>
-    // Los dashboards (nombre, descripción y enlace) los entrega /api/dashboards sólo a usuarios
-    // con login. Se configuran en la Static Web App → Variables de entorno → DASHBOARDS.
+    // Los dashboards (nombre y descripción) los entrega /api/dashboards sólo a usuarios con login.
+    // El enlace no llega a la página: el iframe abre /api/reporte/<id>, que redirige a Power BI.
+    // Se configuran en la Static Web App → Variables de entorno → DASHBOARDS.
     const nav = document.getElementById("pestanas");
     const iframe = document.getElementById("reporte");
     const panelReporte = document.getElementById("panel-reporte");
@@ -84,7 +85,7 @@
       if (p.tipo === "reporte") {
         document.getElementById("titulo").textContent = p.nombre;
         document.getElementById("descripcion").textContent = p.descripcion;
-        iframe.src = p.url || "about:blank";
+        iframe.src = Number.isInteger(p.id) ? "/api/reporte/" + p.id : "about:blank";
         iframe.title = p.nombre;
       }
       [...nav.children].forEach((b, j) => b.setAttribute("aria-selected", j === i));

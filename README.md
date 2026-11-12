@@ -21,7 +21,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 | `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `lectores/` (uno por tipo de archivo) |
 | `sql/` | Tablas que necesita el job |
 | `docker/` | Imagen del job |
-| `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó) |
+| `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` lista los reportes y `/api/reporte/<id>` abre uno) |
 | `local/` | Script rclone que envía Reporte 1.117 y Velocidades desde el espejo FTP de la máquina local |
 | `infra/` | Script que crea almacenamiento, cola, Event Grid, registro y job |
 | `docs/DESPLIEGUE.md` | Paso a paso del despliegue |
