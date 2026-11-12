@@ -207,8 +207,15 @@ Table raw_eventos_exogenos {
 
 // ───────────────────────────── maestros ─────────────────────────────
 
+Table dim_terminal {
+  terminal_id smallint [pk, increment]
+  nombre varchar(60) [not null, unique, note: 'Los Sauces, Gabriela...']
+  Note: 'Igual que dim_terminal de indicadores_bi (maestro servicios_terminales.csv).'
+}
+
 Table dim_servicio_sentido {
   servicio_sentido_id int [pk, increment]
+  terminal_id smallint [not null, ref: > dim_terminal.terminal_id, note: 'terminal del servicio (por código usuario)']
   codigo_ts varchar(20) [not null, note: 'normalizado: sin espacios, mayúsculas']
   codigo_usuario varchar(20)
   sentido char(1) [not null, note: 'I / R']
@@ -358,25 +365,36 @@ Table icfp_sspd {
   fecha date [ref: > dim_fecha.fecha]
   servicio_sentido_id int [ref: > dim_servicio_sentido.servicio_sentido_id]
   periodo_id smallint [ref: > dim_periodo.periodo_id]
+  mes date [not null, note: 'desnormalizado para agrupar sin joins']
+  tipo_dia varchar(10) [not null, note: 'el que rigió ese día (programa_dia)']
+  terminal_id smallint [not null, ref: > dim_terminal.terminal_id]
   programa_periodo_id bigint [ref: > programa_periodo.programa_periodo_id]
+  longitud_km decimal(10,3) [note: 'L s,p,d']
   ep int [not null, note: 'expediciones programadas']
   ev int [not null, note: 'expediciones válidas, tras trasvasije']
+  ev_tope int [not null, note: 'min(ev, ep): para agregar ICF']
   pl_prog int [not null]
   pl_val int [not null]
-  km_prog decimal(12,3) [not null, note: 'kmp = L · ep']
+  pl_val_tope int [not null, note: 'min(pl_val, pl_prog): para agregar ICP']
   icf decimal(8,6) [note: 'min(1, ev/ep)']
   icp decimal(8,6) [note: 'min(1, pl_val/pl_prog)']
   feo decimal(8,5)
   ft decimal(8,5)
-  km_validos decimal(12,3) [note: 'min(icf·FEO·FT, icp·FEO·FT) · kmp']
+  km_programados decimal(12,3) [not null, note: 'kmp = L · ep (denominador ICFP)']
+  km_ejecutados decimal(12,3) [not null, note: 'L · ev (válidos realizados, sin tope)']
+  km_derecho_pago decimal(12,3) [not null, note: 'kmv = min(icf·FEO·FT, icp·FEO·FT) · kmp (numerador ICFP); 0 si excluido']
   excluido boolean [not null, default: false]
-  evento_id bigint [ref: > evento_exogeno.evento_id, note: 'si excluido']
-  estado varchar(20) [not null, note: 'OK | SIN_EXIGENCIA | SIN_PROGRAMA | SIN_CAPACIDAD']
+  evento_id bigint [ref: > evento_exogeno.evento_id, note: 'evento que causó la exclusión']
+  estado varchar(20) [not null, note: 'OK | SIN_EXIGENCIA | SIN_PROGRAMA | SIN_CAPACIDAD | EXCLUIDO']
 
   indexes {
     (calculo_id, fecha, servicio_sentido_id, periodo_id) [pk]
+    (calculo_id, mes, terminal_id) [name: 'ix_icfp_mes_terminal']
   }
-  Note: 'Detalle del ICFP por servicio-sentido-periodo-día (Contrato 5.3.1.6.1 a 5.3.1.6.5).'
+  Note: '''Grano: servicio-sentido-periodo-día (5.3.1.6). Guarda numeradores y denominadores para que el
+dashboard agregue a cualquier nivel (mes, día, terminal, servicio, sentido, tipo de día):
+  ICFP = Σ km_derecho_pago / Σ km_programados   (sin filas excluidas en ambos)
+  ICF  = Σ ev_tope / Σ ep        ICP = Σ pl_val_tope / Σ pl_prog'''
 }
 
 Table icfp_trasvasije {
@@ -413,6 +431,35 @@ Table resultado_indicador {
   Note: 'Resultados agregados de cualquier indicador. Superset lee de aquí (vía vistas del último cálculo).'
 }
 
+// ───────────────────────────── vistas para Superset ─────────────────────────────
+
+Table v_icfp_dashboard {
+  calculo_id bigint [note: 'solo el último cálculo DEFINITIVO/PROVISORIO por mes']
+  mes date
+  fecha date
+  tipo_dia varchar(10)
+  terminal varchar(60)
+  servicio varchar(20) [note: 'código usuario']
+  codigo_ts varchar(20)
+  sentido char(1)
+  periodo varchar(20)
+  ep int
+  ev int
+  ev_tope int
+  pl_prog int
+  pl_val int
+  pl_val_tope int
+  icf decimal(8,6)
+  icp decimal(8,6)
+  km_programados decimal(12,3)
+  km_ejecutados decimal(12,3)
+  km_derecho_pago decimal(12,3)
+  excluido boolean
+  tipo_exclusion varchar(30) [note: 'tipo del evento exógeno']
+  categoria_exclusion varchar(60)
+  Note: 'VISTA (no tabla): icfp_sspd del último cálculo + nombres de terminal, servicio, periodo y evento. Superset agrega con las fórmulas de icfp_sspd.'
+}
+
 TableGroup control {
   control_carga
   indicador
@@ -429,6 +476,7 @@ TableGroup raw {
 }
 
 TableGroup maestros {
+  dim_terminal
   dim_servicio_sentido
   dim_fecha
   dim_tipologia_bus
@@ -457,4 +505,5 @@ TableGroup icfp {
 
 TableGroup resultado {
   resultado_indicador
+  v_icfp_dashboard
 }
