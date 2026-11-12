@@ -33,6 +33,19 @@
     .resultado { margin-top:16px; padding:12px 14px; border-radius:6px; font-size:.95rem; border:1px solid var(--line); white-space:pre-wrap; }
     .resultado.ok { border-color:var(--ok); color:var(--ok); background:#ecf7ee; }
     .resultado.err { border-color:var(--err); color:var(--err); background:#fdecea; }
+    .maestros-barra { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    .maestros-barra input[type=search] { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; min-width:220px; }
+    .boton.sec { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+    .tabla-wrap { overflow:auto; max-height:65vh; border:1px solid var(--line); border-radius:6px; }
+    table.maestro { border-collapse:collapse; width:100%; font-size:.9rem; }
+    table.maestro th, table.maestro td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+    table.maestro th { position:sticky; top:0; background:#f0f4f8; z-index:1; }
+    table.maestro td input { font:inherit; padding:4px 6px; border:1px solid transparent; border-radius:4px; width:100%; min-width:90px; background:transparent; }
+    table.maestro td input:focus, table.maestro tr.cambiada td input { border-color:var(--line); background:#fff; }
+    table.maestro tr.cambiada { background:#fff8e1; }
+    table.maestro td.meta { color:var(--muted); font-size:.8rem; }
+    table.maestro button { font:inherit; font-size:.85rem; border:0; background:none; color:var(--accent); cursor:pointer; padding:2px 6px; }
+    table.maestro button.borrar { color:var(--err); }
     footer { text-align:center; color:var(--muted); font-size:.8rem; margin:24px 0; }
   </style>
 </head>
@@ -59,14 +72,28 @@
             <option value="anexo3">Anexo 3 – Parámetros de operación</option>
             <option value="velocidades">Velocidades DTPM (diario)</option>
             <option value="exclusiones">Exclusiones DTPM – eventos exógenos (mensual)</option>
+            <option value="flota">Flota – patente, tipo de bus y plazas (.csv o .xlsx)</option>
           </select>
         </label>
-        <label>Archivo (.xlsx)
-          <input type="file" id="archivo" accept=".xlsx" required>
+        <label>Archivo (.xlsx o .csv)
+          <input type="file" id="archivo" accept=".xlsx,.csv" required>
         </label>
         <button class="boton" id="btn-cargar" type="submit">Subir y cargar</button>
       </form>
       <div id="resultado" class="resultado" hidden></div>
+    </section>
+
+    <section class="card" id="panel-maestros" hidden>
+      <h2>Datos maestros</h2>
+      <p id="maestro-descripcion">Tablas de apoyo del cálculo. Cada cambio queda registrado con tu usuario y recalcula el ICFP.</p>
+      <div class="maestros-barra">
+        <select id="maestro-tabla"></select>
+        <input type="search" id="maestro-filtro" placeholder="Buscar…">
+        <button class="boton sec" id="maestro-nueva" type="button">+ Agregar fila</button>
+        <span id="maestro-cuenta" class="meta"></span>
+      </div>
+      <div id="maestro-aviso" class="resultado" hidden></div>
+      <div class="tabla-wrap"><table class="maestro" id="maestro-grilla"></table></div>
     </section>
   </main>
   <footer>Datos de prueba · se actualizan al republicar el reporte</footer>
@@ -79,12 +106,15 @@
     const iframe = document.getElementById("reporte");
     const panelReporte = document.getElementById("panel-reporte");
     const panelCarga = document.getElementById("panel-carga");
+    const panelMaestros = document.getElementById("panel-maestros");
     let PESTANAS = [];
 
     function mostrar(i) {
       const p = PESTANAS[i];
       panelReporte.hidden = p.tipo !== "reporte";
       panelCarga.hidden = p.tipo !== "carga";
+      panelMaestros.hidden = p.tipo !== "maestros";
+      if (p.tipo === "maestros") abrirMaestros();
       if (p.tipo === "reporte") {
         document.getElementById("titulo").textContent = p.nombre;
         document.getElementById("descripcion").textContent = p.descripcion;
@@ -96,7 +126,8 @@
     }
 
     function armarPestanas(dashboards) {
-      PESTANAS = [...dashboards.map(d => ({ ...d, tipo: "reporte" })), { nombre: "Cargar archivos", tipo: "carga" }];
+      PESTANAS = [...dashboards.map(d => ({ ...d, tipo: "reporte" })), { nombre: "Cargar archivos", tipo: "carga" },
+                  { nombre: "Datos maestros", tipo: "maestros" }];
       nav.replaceChildren();
       PESTANAS.forEach((p, i) => {
         const b = document.createElement("button");
@@ -191,6 +222,125 @@
         boton.textContent = "Subir y cargar";
       }
     });
+
+    // ----- Datos maestros -----
+    const selTabla = document.getElementById("maestro-tabla");
+    const filtro = document.getElementById("maestro-filtro");
+    const grilla = document.getElementById("maestro-grilla");
+    const avisoM = document.getElementById("maestro-aviso");
+    let TABLAS = null, FILAS = [];
+
+    function avisoMaestro(texto, ok) {
+      avisoM.hidden = !texto;
+      avisoM.className = "resultado " + (ok ? "ok" : "err");
+      avisoM.textContent = texto || "";
+    }
+
+    async function abrirMaestros() {
+      if (TABLAS) return;
+      try {
+        const r = await fetch("/api/maestros", { cache: "no-store" });
+        TABLAS = await leerJson(r);
+        if (!Array.isArray(TABLAS)) throw new Error(TABLAS.mensaje);
+        selTabla.replaceChildren(...TABLAS.map(t => new Option(t.nombre, t.tabla)));
+        await cargarTabla();
+      } catch (err) {
+        TABLAS = null;
+        avisoMaestro("No se pudieron leer los datos maestros: " + err.message, false);
+      }
+    }
+
+    const tablaActual = () => TABLAS.find(t => t.tabla === selTabla.value);
+
+    async function cargarTabla() {
+      const t = tablaActual();
+      document.getElementById("maestro-descripcion").textContent = t.descripcion;
+      avisoMaestro("");
+      const d = await leerJson(await fetch(`/api/maestros?tabla=${t.tabla}`, { cache: "no-store" }));
+      if (!d.filas) return avisoMaestro(d.mensaje || "Error al leer la tabla.", false);
+      FILAS = d.filas;
+      dibujar();
+    }
+
+    function filaHtml(t, f, nueva) {
+      const tr = document.createElement("tr");
+      if (nueva) tr.classList.add("cambiada");
+      for (const c of t.columnas) {
+        const td = document.createElement("td");
+        const inp = document.createElement("input");
+        inp.value = f[c.nombre] ?? "";
+        inp.dataset.col = c.nombre;
+        if (c.tipo === "entero") inp.inputMode = "numeric";
+        if (c.clave && !nueva) inp.readOnly = true;
+        inp.oninput = () => tr.classList.add("cambiada");
+        inp.onkeydown = e => { if (e.key === "Enter") guardar(tr, t); };
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+      for (const x of t.extra) {
+        const td = document.createElement("td");
+        td.className = "meta";
+        td.textContent = f[x] ?? "";
+        tr.appendChild(td);
+      }
+      const acciones = document.createElement("td");
+      const g = document.createElement("button"); g.textContent = "Guardar"; g.onclick = () => guardar(tr, t);
+      const b = document.createElement("button"); b.textContent = nueva ? "Quitar" : "Borrar"; b.className = "borrar";
+      b.onclick = () => nueva ? tr.remove() : borrar(tr, t);
+      acciones.append(g, b);
+      tr.appendChild(acciones);
+      return tr;
+    }
+
+    function dibujar() {
+      const t = tablaActual();
+      const q = filtro.value.trim().toLowerCase();
+      const visibles = FILAS.filter(f => !q || Object.values(f).some(v => String(v ?? "").toLowerCase().includes(q)));
+      const cab = document.createElement("tr");
+      for (const titulo of [...t.columnas.map(c => c.titulo), ...t.extra.map(x => ({ origen: "Origen", actualizado_por: "Modificado por", actualizado_at: "Fecha" })[x] || x), ""]) {
+        const th = document.createElement("th"); th.textContent = titulo; cab.appendChild(th);
+      }
+      grilla.replaceChildren(cab, ...visibles.slice(0, 2000).map(f => filaHtml(t, f, false)));
+      document.getElementById("maestro-cuenta").textContent =
+        `${visibles.length} de ${FILAS.length} filas` + (visibles.length > 2000 ? " (se muestran 2000; usa la búsqueda)" : "");
+    }
+
+    async function enviar(t, accion, fila) {
+      const r = await fetch(`/api/maestros?tabla=${t.tabla}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion, fila }),
+      });
+      return leerJson(r);
+    }
+
+    function leerFila(tr) {
+      return Object.fromEntries([...tr.querySelectorAll("input")].map(i => [i.dataset.col, i.value]));
+    }
+
+    async function guardar(tr, t) {
+      const d = await enviar(t, "guardar", leerFila(tr));
+      if (d.estado !== "OK") return avisoMaestro("✗ " + (d.mensaje || "No se pudo guardar."), false);
+      await cargarTabla();
+      avisoMaestro("✓ " + d.mensaje, true);
+    }
+
+    async function borrar(tr, t) {
+      const fila = leerFila(tr);
+      const clave = fila[t.columnas[0].nombre];
+      if (!confirm(`¿Borrar ${clave}?`)) return;
+      const d = await enviar(t, "borrar", fila);
+      if (d.estado !== "OK") return avisoMaestro("✗ " + (d.mensaje || "No se pudo borrar."), false);
+      await cargarTabla();
+      avisoMaestro("✓ Borrado. " + d.mensaje.replace(/^Guardado\. /, ""), true);
+    }
+
+    selTabla.onchange = () => { filtro.value = ""; cargarTabla(); };
+    filtro.oninput = dibujar;
+    document.getElementById("maestro-nueva").onclick = () => {
+      const t = tablaActual();
+      const tr = filaHtml(t, {}, true);
+      grilla.firstChild.after(tr);
+      tr.querySelector("input").focus();
+    };
   </script>
 </body>
 </html>
