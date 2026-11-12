@@ -370,20 +370,22 @@ Table icfp_sspd {
   terminal_id smallint [not null, ref: > dim_terminal.terminal_id]
   programa_periodo_id bigint [ref: > programa_periodo.programa_periodo_id]
   longitud_km decimal(10,3) [note: 'L s,p,d']
-  ep int [not null, note: 'expediciones programadas']
-  ev int [not null, note: 'expediciones válidas, tras trasvasije']
-  ev_tope int [not null, note: 'min(ev, ep): para agregar ICF']
-  pl_prog int [not null]
-  pl_val int [not null]
-  pl_val_tope int [not null, note: 'min(pl_val, pl_prog): para agregar ICP']
-  icf decimal(8,6) [note: 'min(1, ev/ep)']
-  icp decimal(8,6) [note: 'min(1, pl_val/pl_prog)']
-  feo decimal(8,5)
-  ft decimal(8,5)
-  km_programados decimal(12,3) [not null, note: 'kmp = L · ep (denominador ICFP)']
-  km_ejecutados decimal(12,3) [not null, note: 'L · ev (válidos realizados, sin tope)']
-  km_derecho_pago decimal(12,3) [not null, note: 'kmv = min(icf·FEO·FT, icp·FEO·FT) · kmp (numerador ICFP); 0 si excluido']
-  excluido boolean [not null, default: false]
+  ep int [not null, note: 'expediciones_exigidas']
+  ev int [not null, note: 'expediciones_validas (inicial, sin trasvasije)']
+  ev_trasvasije int [not null, default: 0, note: 'expediciones_trasvasije: neto recibido (+) o cedido (-)']
+  pl_prog int [not null, note: 'total_plazas_exigidas']
+  pl_val int [not null, note: 'total_plazas_validas (inicial)']
+  pl_trasvasije int [not null, default: 0, note: 'plazas_trasvasije']
+  icf decimal(8,6) [note: 'min(1, ev/ep), inicial']
+  icp decimal(8,6) [note: 'min(1, pl_val/pl_prog), inicial']
+  icf_corregido decimal(8,6) [note: 'min(1, (ev+ev_trasvasije)/ep)']
+  icp_corregido decimal(8,6) [note: 'min(1, (pl_val+pl_trasvasije)/pl_prog)']
+  feo decimal(8,5) [default: 1]
+  ft decimal(8,5) [default: 1]
+  km_programados decimal(12,3) [not null, note: 'kmp = L · ep']
+  km_validos decimal(12,3) [not null, note: 'kmv = min(1, icp, icf) · kmp, inicial']
+  km_validos_corregido decimal(12,3) [not null, note: 'kmv_corregido = min(1, icp_corregido, icf_corregido) · kmp (· FEO · FT)']
+  excluido boolean [not null, default: false, note: 'sin_exigencia = 1']
   evento_id bigint [ref: > evento_exogeno.evento_id, note: 'evento que causó la exclusión']
   estado varchar(20) [not null, note: 'OK | SIN_EXIGENCIA | SIN_PROGRAMA | SIN_CAPACIDAD | EXCLUIDO']
 
@@ -391,10 +393,11 @@ Table icfp_sspd {
     (calculo_id, fecha, servicio_sentido_id, periodo_id) [pk]
     (calculo_id, mes, terminal_id) [name: 'ix_icfp_mes_terminal']
   }
-  Note: '''Grano: servicio-sentido-periodo-día (5.3.1.6). Guarda numeradores y denominadores para que el
-dashboard agregue a cualquier nivel (mes, día, terminal, servicio, sentido, tipo de día):
-  ICFP = Σ km_derecho_pago / Σ km_programados   (sin filas excluidas en ambos)
-  ICF  = Σ ev_tope / Σ ep        ICP = Σ pl_val_tope / Σ pl_prog'''
+  Note: '''Grano: servicio-sentido-periodo-día (5.3.1.6), equivale a bi.icfp_data. Filas con ep > 0.
+Km día (por fecha, solo excluido = 0):
+  kmp = Σ km_programados   kmv = Σ km_validos   kmv_corregido = Σ km_validos_corregido
+ICFP (cualquier agrupación) = Σ km_validos_corregido / Σ km_programados, ambos con excluido = 0
+Km con derecho a pago (mes) = Σ km_programados (todas, incluidas excluidas) · ICFP del mes'''
 }
 
 Table icfp_trasvasije {
@@ -445,19 +448,33 @@ Table v_icfp_dashboard {
   periodo varchar(20)
   ep int
   ev int
-  ev_tope int
+  ev_trasvasije int
   pl_prog int
   pl_val int
-  pl_val_tope int
+  pl_trasvasije int
   icf decimal(8,6)
   icp decimal(8,6)
+  icf_corregido decimal(8,6)
+  icp_corregido decimal(8,6)
   km_programados decimal(12,3)
-  km_ejecutados decimal(12,3)
-  km_derecho_pago decimal(12,3)
+  km_validos decimal(12,3)
+  km_validos_corregido decimal(12,3)
   excluido boolean
   tipo_exclusion varchar(30) [note: 'tipo del evento exógeno']
   categoria_exclusion varchar(60)
   Note: 'VISTA (no tabla): icfp_sspd del último cálculo + nombres de terminal, servicio, periodo y evento. Superset agrega con las fórmulas de icfp_sspd.'
+}
+
+Table v_icfp_mes {
+  mes date
+  terminal varchar(60) [note: 'opcional: la vista agrupa también por terminal']
+  km_programados_total decimal(14,3) [note: 'Σ kmp, incluidas excluidas']
+  km_programados_medidos decimal(14,3) [note: 'Σ kmp con excluido = 0']
+  km_validos_corregido decimal(14,3) [note: 'Σ kmv_corregido con excluido = 0']
+  icfp decimal(8,6) [note: 'km_validos_corregido / km_programados_medidos']
+  km_derecho_pago decimal(14,3) [note: 'km_programados_total · icfp (contrato 5.3.1.5, parte PO)']
+  km_excluidos decimal(14,3) [note: 'Σ kmp con excluido = 1']
+  Note: 'VISTA mensual: reproduce la consulta "Kms" de Superset sobre bi.icfp_data.'
 }
 
 TableGroup control {
@@ -506,4 +523,5 @@ TableGroup icfp {
 TableGroup resultado {
   resultado_indicador
   v_icfp_dashboard
+  v_icfp_mes
 }
