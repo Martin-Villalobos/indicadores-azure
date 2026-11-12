@@ -1,0 +1,63 @@
+// Modelo de datos de indicadores-azure (MySQL).
+// Fuente de verdad del diagrama: editar aquí y regenerar modelo.svg.
+// Ver en vivo: pegar este archivo en https://dbdiagram.io/d
+
+Project indicadores_azure {
+  database_type: 'MySQL'
+  Note: 'Carga de archivos (anexos) desde Blob Storage a MySQL.'
+}
+
+Enum estado_carga {
+  PROCESANDO
+  COMPLETADO
+  ERROR
+}
+
+Table control_carga {
+  carga_id bigint [pk, increment]
+  tipo_archivo varchar(40) [not null]
+  nombre_archivo varchar(255) [not null]
+  blob_nombre varchar(400) [not null]
+  hash_sha256 char(64) [not null]
+  estado estado_carga [not null]
+  subido_por varchar(255)
+  inicio_at datetime [not null]
+  fin_at datetime
+  filas_leidas int
+  filas_cargadas int
+  mensaje_error text
+
+  indexes {
+    (tipo_archivo, hash_sha256) [unique, name: 'uq_control_carga_tipo_hash']
+    (estado, inicio_at) [name: 'ix_control_carga_estado']
+  }
+  Note: 'Un registro por archivo procesado por el job (tipo + contenido).'
+}
+
+Table raw_anexo1 {
+  id bigint [pk, increment]
+  carga_id bigint [not null, ref: > control_carga.carga_id]
+  numero_fila int [not null]
+  unidad_servicios varchar(40)
+  anio smallint
+  codigo_ts_servicio varchar(20) [not null]
+  codigo_usuario_servicio varchar(20)
+  sentido varchar(20) [not null]
+  tipo_dia varchar(20) [not null]
+  tramo_horario smallint
+  hora_inicio time [not null]
+  hora_termino time
+  fecha_inicio date
+  fecha_termino date
+
+  indexes {
+    carga_id [name: 'ix_raw_anexo1_carga']
+    (codigo_ts_servicio, sentido, tipo_dia) [name: 'ix_raw_anexo1_servicio']
+  }
+  Note: 'Anexo 1 tal como viene en el archivo, una fila por tramo.'
+}
+
+TableGroup carga {
+  control_carga
+  raw_anexo1
+}
