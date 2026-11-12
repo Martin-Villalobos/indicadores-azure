@@ -24,8 +24,7 @@ blob_container = "cargas"
 queue_name = ""
 batch_size = 5000
 # Lista de dashboards que muestra la web local (en prod es la variable DASHBOARDS de la Static Web App).
-dashboards = '[{"nombre": "Dashboard de ejemplo (dev)", "descripcion": "Entorno local: en prod aquí van los reportes de Power BI.", "url": "about:blank"}]'
-
+dashboards = '[{"nombre": "IP del mes", "descripcion": "Índice de puntualidad por expedición.", "url": "https://app.powerbi.com/view?r=eyJrIjoiMWQyOGQ0MmEtN2VlZi00OGMyLThlMWEtYzk3ODgzNzQ5OWRiIiwidCI6ImQ1NzFiM2Q1LTRkNGItNDRkMy04ZGM3LWZkODkyZjQ1NTQ2OCIsImMiOjR9"}]'
 [prod]
 db_host = "mysql-prueba-indicadores.mysql.database.azure.com"
 db_port = 3306
