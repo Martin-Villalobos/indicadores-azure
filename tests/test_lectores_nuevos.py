@@ -103,3 +103,14 @@ def test_exclusiones_periodo_fuera_de_rango():
                                    ("03/03/2026", "U16", "T", "Ida", 80)]})
     with pytest.raises(ErrorDeCarga, match="periodo '80'"):
         list(exclusiones.leer(contenido))
+
+
+def test_flota_csv_punto_y_coma_y_patente_normalizada():
+    from indicadores_azure.lectores import flota
+
+    filas = list(flota.leer("ppu;tipo_bus;capacidad\nAB-CD12;B1;90\nEFGH34;C1;\n".encode()))
+    assert filas == [(2, "ABCD12", "B1", 90), (3, "EFGH34", "C1", None)]
+    with pytest.raises(ErrorDeCarga, match="repetida"):
+        list(flota.leer(b"ppu,tipo_bus,capacidad\nAB12,B1,90\nab-12,B1,90\n"))
+    with pytest.raises(ErrorDeCarga, match="CAPACIDAD"):
+        list(flota.leer(b"ppu,tipo\nAB12,B1\n"))

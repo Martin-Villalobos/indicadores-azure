@@ -35,14 +35,16 @@ def sentencias(texto: str) -> list[str]:
     return [s.strip() for s in re.split(r";\s*(?:\n|$)", sin_comentarios) if s.strip()]
 
 
-def _tablas(cur) -> list[str]:
-    cur.execute("SHOW TABLES")
+def _tablas(cur, tipo: str = "BASE TABLE") -> list[str]:
+    cur.execute("SHOW FULL TABLES WHERE Table_type = %s", (tipo,))
     return [fila[0] for fila in cur.fetchall()]
 
 
 def sembrar_base(conn, reiniciar: bool = False) -> None:
     with conn.cursor() as cur:
         if reiniciar:
+            for vista in _tablas(cur, "VIEW"):
+                cur.execute(f"DROP VIEW `{vista}`")
             cur.execute("SET FOREIGN_KEY_CHECKS = 0")
             for tabla in _tablas(cur):
                 cur.execute(f"DROP TABLE `{tabla}`")

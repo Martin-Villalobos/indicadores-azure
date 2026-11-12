@@ -18,7 +18,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 
 | Carpeta | Qué hay |
 |---|---|
-| `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `vigencias.py` (qué carga rige cada fecha), `lectores/` (uno por tipo de archivo) |
+| `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `vigencias.py` (qué carga rige cada fecha), `lectores/` (uno por tipo de archivo), `icfp/` (cálculo del ICFP) y `recalculo.py` (cola de recálculos después de cada carga) |
 | `sql/` | Tablas que necesita el job |
 | `docker/` | Imagen del job |
 | `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` lista los reportes y `/api/reporte/<id>` abre uno) |
@@ -29,6 +29,17 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 | `seeds/` | Datos de ejemplo que carga el seeder en dev |
 | `dev/` | Web local (`servidor_web.py`), reemplaza a la Static Web App en dev |
 | `docker-compose.yml` | Entorno dev completo: MySQL, Azurite, seeder, job y web |
+
+## Cálculo del ICFP
+
+Cuando el job completa una carga de Anexo 3, velocidades, exclusiones o flota, encola en `recalculo_pendiente` las fechas que esa carga rige (±1 día por el trasvasije) y las recalcula. El cálculo (`src/indicadores_azure/icfp/`) es el de indicadores-bi:
+
+1. exigencia por hora desde el Anexo 3 vigente (suma de sus dos MH);
+2. ICF e ICP iniciales con las expediciones OK de velocidades y las plazas de `dim_bus`;
+3. trasvasije de extremos (5.3.1.6.6), copiado de `icf_icp/correcciones.py`;
+4. km programados (distancia base · salidas), km válidos y exclusiones DTPM (hoja ICFP-IE).
+
+Cada corrida es un `calculo` nuevo; `v_icfp_dashboard` muestra el último por fecha y `v_icfp_mes` el ICFP y los km con derecho a pago del mes. A mano: `indicadores-azure-icfp --desde 2026-02-01 --hasta 2026-02-28` o `indicadores-azure-icfp --pendientes`.
 
 ## Agregar un tipo de archivo
 

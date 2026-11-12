@@ -23,6 +23,7 @@ dev = ["azure-functions>=1.18", "pytest>=8"]
 [project.scripts]
 indicadores-azure-procesar = "indicadores_azure.procesar:main"
 indicadores-azure-semilla = "indicadores_azure.semilla:main"
+indicadores-azure-icfp = "indicadores_azure.recalculo:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
