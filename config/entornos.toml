@@ -26,7 +26,7 @@ batch_size = 5000
 # Lista de dashboards que muestra la web local (en prod es la variable DASHBOARDS de la Static Web App).
 # Para ver un reporte real en local, pon su enlace de "Publicar en la web" en "url"
 # (o define la variable DASHBOARDS, que tiene prioridad).
-dashboards = '[{"nombre": "Dashboard de ejemplo (dev)", "descripcion": "Entorno local: en prod aquí van los reportes de Power BI.", "url": ""}]'
+dashboards = '[{"nombre": "Dashboard de ejemplo (dev)", "descripcion": "Entorno local: en prod aquí van los reportes de Power BI.", "url": "https://app.powerbi.com/view?r=eyJrIjoiMWQyOGQ0MmEtN2VlZi00OGMyLThlMWEtYzk3ODgzNzQ5OWRiIiwidCI6ImQ1NzFiM2Q1LTRkNGItNDRkMy04ZGM3LWZkODkyZjQ1NTQ2OCIsImMiOjR9"}]'
 
 [prod]
 db_host = "mysql-prueba-indicadores.mysql.database.azure.com"
