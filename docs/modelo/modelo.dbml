@@ -14,10 +14,19 @@
 // Para sumar un indicador nuevo: una fila en `indicador`, sus parámetros en
 // `parametro`, sus entradas raw si son nuevas, una tabla de detalle propia si
 // la necesita (como icfp_sspd) y sus agregados en `resultado_indicador`.
+//
+// Equivalencias con la base indicadores_bi (indicadores-bi, Python):
+//   control_carga        ~ control_ejecucion
+//   programa             ~ programa_ejecucion + vigencia_programa_ejecucion
+//   programa_periodo     ~ detalle_programacion_periodo (+ programacion_periodo_origen)
+//   expedicion           ~ fact_expedicion
+//   calculo              ~ control_calculo_icf_icp / control_correccion_icf_icp
+//   icfp_sspd            ~ fact_icf_icp_inicial (+ correcciones)
+//   parametro            ~ dim_parametro_ite
 
 Project indicadores_azure {
   database_type: 'MySQL'
-  Note: 'Cálculo de indicadores del contrato (ICFP primero) a partir de archivos DTPM.'
+  Note: 'Cálculo de indicadores del contrato (ICFP primero) para la U16, a partir de archivos DTPM.'
 }
 
 // ───────────────────────────── control ─────────────────────────────
@@ -71,7 +80,6 @@ Table indicador {
 Table calculo {
   calculo_id bigint [pk, increment]
   indicador_id smallint [not null, ref: > indicador.indicador_id]
-  unidad_servicio_id smallint [not null, ref: > dim_unidad_servicio.unidad_servicio_id]
   fecha_desde date [not null]
   fecha_hasta date [not null]
   version_algoritmo varchar(50) [not null]
@@ -82,7 +90,7 @@ Table calculo {
   mensaje_error text
 
   indexes {
-    (indicador_id, unidad_servicio_id, fecha_desde) [name: 'ix_calculo_indicador']
+    (indicador_id, fecha_desde) [name: 'ix_calculo_indicador']
   }
   Note: 'Cada corrida de un indicador. Nunca se sobrescribe: un recálculo es un calculo nuevo.'
 }
@@ -102,14 +110,13 @@ Table parametro {
   parametro_id int [pk, increment]
   indicador_id smallint [ref: > indicador.indicador_id, note: 'NULL = parámetro común']
   nombre varchar(40) [not null, note: 'FT_OFFLINE, PLAZAS_A, X_IE1, A_ITE...']
-  unidad_servicio_id smallint [ref: > dim_unidad_servicio.unidad_servicio_id, note: 'NULL = todas']
   vigente_desde date [not null]
   vigente_hasta date
   valor decimal(18,10) [not null]
   fuente varchar(200)
 
   indexes {
-    (nombre, unidad_servicio_id, vigente_desde) [unique]
+    (nombre, vigente_desde) [unique]
   }
   Note: 'Generaliza dim_parametro_ite: constantes con vigencia (pueden cambiar por oficio).'
 }
@@ -200,21 +207,14 @@ Table raw_eventos_exogenos {
 
 // ───────────────────────────── maestros ─────────────────────────────
 
-Table dim_unidad_servicio {
-  unidad_servicio_id smallint [pk, increment]
-  codigo varchar(10) [not null, unique, note: 'U16']
-  nombre varchar(100)
-}
-
 Table dim_servicio_sentido {
   servicio_sentido_id int [pk, increment]
-  unidad_servicio_id smallint [not null, ref: > dim_unidad_servicio.unidad_servicio_id]
   codigo_ts varchar(20) [not null, note: 'normalizado: sin espacios, mayúsculas']
   codigo_usuario varchar(20)
   sentido char(1) [not null, note: 'I / R']
 
   indexes {
-    (unidad_servicio_id, codigo_ts, sentido) [unique]
+    (codigo_ts, sentido) [unique]
   }
   Note: 's del contrato. Normaliza el código una sola vez para que anexo y velocidades crucen.'
 }
@@ -230,26 +230,22 @@ Table dim_fecha {
 
 Table dim_tipologia_bus {
   tipologia varchar(5) [pk, note: 'A1, A2, B1, B2, C1, C2']
-  plazas smallint [not null, note: 'Contrato Tabla 5: A=60, B=90, C=150']
+  plazas smallint [not null, note: 'Contrato Tabla 5: A=60, B=90, C=150 (debe calzar con bi.tipo_bus.capacidad)']
 }
 
 Table dim_bus {
   bus_id int [pk, increment]
-  ppu varchar(10) [not null]
+  ppu varchar(10) [not null, unique]
   tipologia varchar(5) [not null, ref: > dim_tipologia_bus.tipologia]
   terminal varchar(60)
-  vigente_desde date [not null]
-  vigente_hasta date
-
-  indexes {
-    (ppu, vigente_desde) [unique]
-  }
-  Note: 'Flota con historia (hoy bi.buses no tiene fechas).'
+  primera_fecha date [note: 'primera vez vista en velocidades']
+  ultima_fecha date [note: 'última vez vista en velocidades']
+  Note: 'Flota. Los buses no cambian de tipología; solo dejan de aparecer.'
 }
 
 Table dim_periodo {
   periodo_id smallint [pk, increment]
-  esquema varchar(20) [not null, note: 'HORA (como el Java) | PO (agrupación MH del contrato)']
+  esquema varchar(20) [not null, note: 'MH (contrato) | AGRUPACION_MH (si el Ministerio agrupa por oficio) | HORA (Java / indicadores-bi actual)']
   codigo varchar(20) [not null]
   hora_inicio time [not null]
   hora_termino time [not null]
@@ -258,7 +254,7 @@ Table dim_periodo {
   indexes {
     (esquema, codigo) [unique]
   }
-  Note: 'p del contrato. El esquema deja cambiar de hora a periodos del PO sin tocar el resto.'
+  Note: 'p del contrato: la media hora (Anexo 3 C.2), agrupable por oficio. El cálculo elige el esquema y lo guarda en calculo.parametros.'
 }
 
 // ───────────────────────────── programa ─────────────────────────────
@@ -266,7 +262,6 @@ Table dim_periodo {
 Table programa {
   programa_id int [pk, increment]
   carga_id bigint [not null, ref: > control_carga.carga_id]
-  unidad_servicio_id smallint [not null, ref: > dim_unidad_servicio.unidad_servicio_id]
   tipo varchar(10) [not null, note: 'PO | PE (programa especial)']
   vigente_desde date [not null]
   vigente_hasta date [not null]
@@ -276,14 +271,10 @@ Table programa {
 }
 
 Table programa_dia {
-  fecha date [ref: > dim_fecha.fecha]
-  unidad_servicio_id smallint [ref: > dim_unidad_servicio.unidad_servicio_id]
+  fecha date [pk, ref: > dim_fecha.fecha]
   programa_id int [not null, ref: > programa.programa_id]
   tipo_dia varchar(10) [not null, note: 'tipo de día que aplica ese día']
 
-  indexes {
-    (fecha, unidad_servicio_id) [pk]
-  }
   Note: 'Resuelve qué programa y tipo de día rige cada fecha. Se materializa al cargar un PO/PE.'
 }
 
@@ -300,7 +291,7 @@ Table programa_periodo {
   indexes {
     (programa_id, servicio_sentido_id, tipo_dia, periodo_id) [unique]
   }
-  Note: 'Exigencia por servicio-sentido-periodo y tipo de día (agrupa las medias horas del Anexo 3).'
+  Note: 'Exigencia por servicio-sentido-periodo y tipo de día. Con esquema MH es 1:1 con las filas del Anexo 3.'
 }
 
 Table programa_periodo_tipologia {
@@ -325,8 +316,8 @@ Table expedicion {
   fh_salida datetime [not null]
   fh_llegada datetime
   periodo_id smallint [not null, ref: > dim_periodo.periodo_id, note: 'periodo de despacho']
-  valida boolean [not null, note: 'cláusula 1.1.22']
-  motivo_invalidez varchar(40)
+  estado_origen varchar(10) [not null, note: 'estado del archivo de velocidades']
+  valida boolean [not null, note: 'estado_origen = OK (cláusula 1.1.22)']
   plazas smallint [note: 'según tipología del bus']
 
   indexes {
@@ -339,7 +330,6 @@ Table evento_exogeno {
   evento_id bigint [pk, increment]
   carga_id bigint [ref: > control_carga.carga_id]
   fecha date [not null, ref: > dim_fecha.fecha]
-  unidad_servicio_id smallint [not null, ref: > dim_unidad_servicio.unidad_servicio_id]
   tipo varchar(30) [not null, note: 'TECNOLOGICO_MAYOR | OPERACIONAL_SIMPLE | OPERACIONAL_COMPLEJO | OPERACIONAL_MAYOR']
   categoria varchar(60) [note: 'p. ej. Tráfico Recargado (define el aporte al FEO)']
   aceptado boolean [not null]
@@ -355,13 +345,9 @@ Table evento_exclusion {
 }
 
 Table factor_dia {
-  fecha date [ref: > dim_fecha.fecha]
-  unidad_servicio_id smallint [ref: > dim_unidad_servicio.unidad_servicio_id]
+  fecha date [pk, ref: > dim_fecha.fecha]
   feo decimal(8,5) [not null, note: 'FEO d, >= 1']
 
-  indexes {
-    (fecha, unidad_servicio_id) [pk]
-  }
   Note: 'Factor por Eventos Operacionales del día. FT_offline vive en parametro.'
 }
 
@@ -443,7 +429,6 @@ TableGroup raw {
 }
 
 TableGroup maestros {
-  dim_unidad_servicio
   dim_servicio_sentido
   dim_fecha
   dim_tipologia_bus
