@@ -225,61 +225,67 @@
 <!-- vigencia_archivo -->
 <g id="vigencia_archivo" class="node">
 <title>vigencia_archivo</title>
-<g id="a_vigencia_archivo"><a xlink:title="vigencia_archivo&#10;Qué carga rige cada fecha, por tipo de archivo. Regla: entre filas vigentes del mismo tipo&#10;los rangos no se cruzan, así que para (tipo, fecha) hay a lo sumo una carga vigente.&#10;Un PE de un día parte el PO en dos tramos; recargar un archivo corregido lo reemplaza entero.&#10;Las filas reemplazadas quedan con vigente = 0 como historia.">
-<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-16323.67" rx="308.1" ry="427.19"/>
-<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-16563.67 1967.16,-16623.67 2399.16,-16623.67 2399.16,-16563.67 1967.16,-16563.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16563.67 1967.16,-16623.67 2399.16,-16623.67 2399.16,-16563.67 1967.16,-16563.67"/>
-<text text-anchor="start" x="2001.77" y="-16584.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;vigencia_archivo &#160;&#160;&#160;&#160;&#160;&#160;</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16503.67 1967.16,-16563.67 2399.16,-16563.67 2399.16,-16503.67 1967.16,-16503.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16503.67 1967.16,-16563.67 2399.16,-16563.67 2399.16,-16503.67 1967.16,-16503.67"/>
-<text text-anchor="start" x="1978.16" y="-16524.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">vigencia_id</text>
-<text text-anchor="start" x="2138.19" y="-16524.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2311.7" y="-16524.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16443.67 1967.16,-16503.67 2399.16,-16503.67 2399.16,-16443.67 1967.16,-16443.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16443.67 1967.16,-16503.67 2399.16,-16503.67 2399.16,-16443.67 1967.16,-16443.67"/>
-<text text-anchor="start" x="1978.13" y="-16463.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">tipo_archivo &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2185.83" y="-16464.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">varchar(40)</text>
-<text text-anchor="start" x="2349.39" y="-16464.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.28" y="-16464.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16383.67 1967.16,-16443.67 2399.16,-16443.67 2399.16,-16383.67 1967.16,-16383.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16383.67 1967.16,-16443.67 2399.16,-16443.67 2399.16,-16383.67 1967.16,-16383.67"/>
-<text text-anchor="start" x="1978.16" y="-16403.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">carga_id &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2272.61" y="-16404.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<text text-anchor="start" x="2349.07" y="-16404.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-16404.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16323.67 1967.16,-16383.67 2399.16,-16383.67 2399.16,-16323.67 1967.16,-16323.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16323.67 1967.16,-16383.67 2399.16,-16383.67 2399.16,-16323.67 1967.16,-16323.67"/>
-<text text-anchor="start" x="1978.16" y="-16343.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_inicio &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2286.81" y="-16344.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2349.07" y="-16344.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-16344.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16263.67 1967.16,-16323.67 2399.16,-16323.67 2399.16,-16263.67 1967.16,-16263.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16263.67 1967.16,-16323.67 2399.16,-16323.67 2399.16,-16263.67 1967.16,-16263.67"/>
-<text text-anchor="start" x="1978.16" y="-16283.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_termino &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2286.81" y="-16284.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2349.07" y="-16284.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-16284.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16203.67 1967.16,-16263.67 2399.16,-16263.67 2399.16,-16203.67 1967.16,-16203.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16203.67 1967.16,-16263.67 2399.16,-16263.67 2399.16,-16203.67 1967.16,-16203.67"/>
-<text text-anchor="start" x="1978.16" y="-16223.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">vigente &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2235.23" y="-16224.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">boolean</text>
-<text text-anchor="start" x="2349.07" y="-16224.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-16224.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16143.67 1967.16,-16203.67 2399.16,-16203.67 2399.16,-16143.67 1967.16,-16143.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16143.67 1967.16,-16203.67 2399.16,-16203.67 2399.16,-16143.67 1967.16,-16143.67"/>
-<text text-anchor="start" x="1978.16" y="-16163.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">reemplazada_por &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2311.7" y="-16164.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16083.67 1967.16,-16143.67 2399.16,-16143.67 2399.16,-16083.67 1967.16,-16083.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16083.67 1967.16,-16143.67 2399.16,-16143.67 2399.16,-16083.67 1967.16,-16083.67"/>
-<text text-anchor="start" x="1978.16" y="-16103.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">creado_at &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2226.37" y="-16104.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
-<text text-anchor="start" x="2349.07" y="-16104.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-16104.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16023.67 1967.16,-16083.67 2399.16,-16083.67 2399.16,-16023.67 1967.16,-16023.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-16023.67 1967.16,-16083.67 2399.16,-16083.67 2399.16,-16023.67 1967.16,-16023.67"/>
-<text text-anchor="start" x="1978.16" y="-16043.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">reemplazado_at &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2265.46" y="-16044.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
-<polygon fill="none" stroke="#29235c" stroke-width="2" points="1966.16,-16022.67 1966.16,-16624.67 2400.16,-16624.67 2400.16,-16022.67 1966.16,-16022.67"/>
+<g id="a_vigencia_archivo"><a xlink:title="vigencia_archivo&#10;Qué carga rige cada fecha, por tipo de archivo. Regla: entre filas vigentes del mismo tipo&#10;los rangos no se cruzan, así que para (tipo, fecha) hay a lo sumo una carga vigente.&#10;Reglas al registrar una carga:&#10; &#160;&#45; ESPECIAL: tapa solo sus días; el GENERAL se parte en el tramo de antes y el de después.&#10; &#160;&#45; GENERAL: reemplaza al GENERAL anterior en su rango, pero respeta los ESPECIAL vigentes&#10; &#160;&#160;&#160;(se parte alrededor de ellos), aunque el general se cargue después.&#10; &#160;&#45; Un archivo corregido del mismo alcance y mismo rango reemplaza al anterior entero.&#10;Ej.: Anexo jul&#45;nov (GENERAL) + Anexo 18&#45;19 sep (ESPECIAL) &#45;&gt; jul&#45;17sep, 18&#45;19sep, 20sep&#45;nov.&#10;Las filas reemplazadas quedan con vigente = 0 como historia.">
+<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-16280.67" rx="308.1" ry="469.54"/>
+<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-16550.67 1967.16,-16610.67 2399.16,-16610.67 2399.16,-16550.67 1967.16,-16550.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16550.67 1967.16,-16610.67 2399.16,-16610.67 2399.16,-16550.67 1967.16,-16550.67"/>
+<text text-anchor="start" x="2001.77" y="-16571.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;vigencia_archivo &#160;&#160;&#160;&#160;&#160;&#160;</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16490.67 1967.16,-16550.67 2399.16,-16550.67 2399.16,-16490.67 1967.16,-16490.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16490.67 1967.16,-16550.67 2399.16,-16550.67 2399.16,-16490.67 1967.16,-16490.67"/>
+<text text-anchor="start" x="1978.16" y="-16511.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">vigencia_id</text>
+<text text-anchor="start" x="2138.19" y="-16511.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2311.7" y="-16511.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16430.67 1967.16,-16490.67 2399.16,-16490.67 2399.16,-16430.67 1967.16,-16430.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16430.67 1967.16,-16490.67 2399.16,-16490.67 2399.16,-16430.67 1967.16,-16430.67"/>
+<text text-anchor="start" x="1978.13" y="-16450.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">tipo_archivo &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2185.83" y="-16451.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">varchar(40)</text>
+<text text-anchor="start" x="2349.39" y="-16451.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.28" y="-16451.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16370.67 1967.16,-16430.67 2399.16,-16430.67 2399.16,-16370.67 1967.16,-16370.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16370.67 1967.16,-16430.67 2399.16,-16430.67 2399.16,-16370.67 1967.16,-16370.67"/>
+<text text-anchor="start" x="1978.16" y="-16390.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">carga_id &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2272.61" y="-16391.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<text text-anchor="start" x="2349.07" y="-16391.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16391.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16310.67 1967.16,-16370.67 2399.16,-16370.67 2399.16,-16310.67 1967.16,-16310.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16310.67 1967.16,-16370.67 2399.16,-16370.67 2399.16,-16310.67 1967.16,-16310.67"/>
+<text text-anchor="start" x="1978.16" y="-16330.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_inicio &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2286.81" y="-16331.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2349.07" y="-16331.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16331.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16250.67 1967.16,-16310.67 2399.16,-16310.67 2399.16,-16250.67 1967.16,-16250.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16250.67 1967.16,-16310.67 2399.16,-16310.67 2399.16,-16250.67 1967.16,-16250.67"/>
+<text text-anchor="start" x="1978.16" y="-16270.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_termino &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2286.81" y="-16271.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2349.07" y="-16271.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16271.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16190.67 1967.16,-16250.67 2399.16,-16250.67 2399.16,-16190.67 1967.16,-16190.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16190.67 1967.16,-16250.67 2399.16,-16250.67 2399.16,-16190.67 1967.16,-16190.67"/>
+<text text-anchor="start" x="1978.16" y="-16210.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">alcance &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2185.51" y="-16211.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">varchar(10)</text>
+<text text-anchor="start" x="2349.07" y="-16211.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16211.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16130.67 1967.16,-16190.67 2399.16,-16190.67 2399.16,-16130.67 1967.16,-16130.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16130.67 1967.16,-16190.67 2399.16,-16190.67 2399.16,-16130.67 1967.16,-16130.67"/>
+<text text-anchor="start" x="1978.16" y="-16150.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">vigente &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2235.23" y="-16151.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">boolean</text>
+<text text-anchor="start" x="2349.07" y="-16151.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16151.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16070.67 1967.16,-16130.67 2399.16,-16130.67 2399.16,-16070.67 1967.16,-16070.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16070.67 1967.16,-16130.67 2399.16,-16130.67 2399.16,-16070.67 1967.16,-16070.67"/>
+<text text-anchor="start" x="1978.16" y="-16090.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">reemplazada_por &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2311.7" y="-16091.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-16010.67 1967.16,-16070.67 2399.16,-16070.67 2399.16,-16010.67 1967.16,-16010.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-16010.67 1967.16,-16070.67 2399.16,-16070.67 2399.16,-16010.67 1967.16,-16010.67"/>
+<text text-anchor="start" x="1978.16" y="-16030.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">creado_at &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2226.37" y="-16031.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
+<text text-anchor="start" x="2349.07" y="-16031.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-16031.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15950.67 1967.16,-16010.67 2399.16,-16010.67 2399.16,-15950.67 1967.16,-15950.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15950.67 1967.16,-16010.67 2399.16,-16010.67 2399.16,-15950.67 1967.16,-15950.67"/>
+<text text-anchor="start" x="1978.16" y="-15970.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">reemplazado_at &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2265.46" y="-15971.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
+<polygon fill="none" stroke="#29235c" stroke-width="2" points="1966.16,-15949.67 1966.16,-16611.67 2400.16,-16611.67 2400.16,-15949.67 1966.16,-15949.67"/>
 </a>
 </g>
 </g>
@@ -287,28 +293,28 @@
 <!-- vigencia_archivo&#45;&gt;tipo_archivo -->
 <g id="edge4" class="edge">
 <title>vigencia_archivo:e&#45;&gt;tipo_archivo:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16473.67C2542.32,-16473.67 2499.45,-16641.76 2631.4,-16694.67 2706.66,-16724.85 3283.73,-16718.81 3361.13,-16694.67 3452.58,-16666.15 3446.22,-16574.44 3534.84,-16568.02"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16460.67C2546.37,-16460.67 2496.48,-16638.32 2631.4,-16694.67 2706.22,-16725.92 3283.73,-16718.81 3361.13,-16694.67 3452.58,-16666.15 3446.22,-16574.44 3534.84,-16568.02"/>
 <polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="3535.04,-16571.52 3544.91,-16567.67 3534.79,-16564.52 3535.04,-16571.52"/>
 <text text-anchor="middle" x="3553.8" y="-16577.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-16483.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-16470.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- vigencia_archivo&#45;&gt;control_carga -->
 <!-- vigencia_archivo&#45;&gt;control_carga -->
 <g id="edge6" class="edge">
 <title>vigencia_archivo:e&#45;&gt;control_carga:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16413.67C2630.99,-16413.67 2511.63,-16024.33 2732.2,-16012.93"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.36,-16016.42 2742.27,-16012.67 2732.18,-16009.43 2732.36,-16016.42"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16400.67C2626.58,-16400.67 2515.85,-16024.33 2732.06,-16012.93"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.36,-16016.43 2742.27,-16012.67 2732.18,-16009.43 2732.36,-16016.43"/>
 <text text-anchor="middle" x="2733.37" y="-16022.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-16423.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-16410.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- vigencia_archivo&#45;&gt;control_carga -->
 <!-- vigencia_archivo&#45;&gt;control_carga -->
 <g id="edge8" class="edge">
 <title>vigencia_archivo:e&#45;&gt;control_carga:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16173.67C2564.76,-16173.67 2573.91,-16019.21 2732.13,-16012.87"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.34,-16016.37 2742.27,-16012.67 2732.2,-16009.37 2732.34,-16016.37"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-16100.67C2553.63,-16100.67 2583.94,-16016.58 2731.88,-16012.8"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.31,-16016.3 2742.27,-16012.67 2732.22,-16009.3 2732.31,-16016.3"/>
 <text text-anchor="middle" x="2751.16" y="-16022.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-16183.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-16110.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- indicador_fuente -->
 <g id="indicador_fuente" class="node">
@@ -409,83 +415,83 @@
 <g id="recalculo_pendiente" class="node">
 <title>recalculo_pendiente</title>
 <g id="a_recalculo_pendiente"><a xlink:title="recalculo_pendiente&#10;Cola de recálculos por rango de fechas. Se llena al registrar una vigencia o a mano.">
-<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-15451.67" rx="309.01" ry="427.19"/>
-<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-15691.67 1967.16,-15751.67 2400.16,-15751.67 2400.16,-15691.67 1967.16,-15691.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15691.67 1967.16,-15751.67 2400.16,-15751.67 2400.16,-15691.67 1967.16,-15691.67"/>
-<text text-anchor="start" x="1978.25" y="-15712.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;recalculo_pendiente &#160;&#160;&#160;&#160;&#160;&#160;</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15631.67 1967.16,-15691.67 2400.16,-15691.67 2400.16,-15631.67 1967.16,-15631.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15631.67 1967.16,-15691.67 2400.16,-15691.67 2400.16,-15631.67 1967.16,-15631.67"/>
-<text text-anchor="start" x="1978.16" y="-15652.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">recalculo_id</text>
-<text text-anchor="start" x="2148.85" y="-15652.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2312.7" y="-15652.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15571.67 1967.16,-15631.67 2400.16,-15631.67 2400.16,-15571.67 1967.16,-15571.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15571.67 1967.16,-15631.67 2400.16,-15631.67 2400.16,-15571.67 1967.16,-15571.67"/>
-<text text-anchor="start" x="1978.16" y="-15591.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">indicador_id &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2241.64" y="-15592.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">smallint</text>
-<text text-anchor="start" x="2350.07" y="-15592.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.96" y="-15592.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15511.67 1967.16,-15571.67 2400.16,-15571.67 2400.16,-15511.67 1967.16,-15511.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15511.67 1967.16,-15571.67 2400.16,-15571.67 2400.16,-15511.67 1967.16,-15511.67"/>
-<text text-anchor="start" x="1978.16" y="-15531.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_desde &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2287.81" y="-15532.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2350.07" y="-15532.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.96" y="-15532.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15451.67 1967.16,-15511.67 2400.16,-15511.67 2400.16,-15451.67 1967.16,-15451.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15451.67 1967.16,-15511.67 2400.16,-15511.67 2400.16,-15451.67 1967.16,-15451.67"/>
-<text text-anchor="start" x="1978.16" y="-15471.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_hasta &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2287.81" y="-15472.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2350.07" y="-15472.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.96" y="-15472.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15391.67 1967.16,-15451.67 2400.16,-15451.67 2400.16,-15391.67 1967.16,-15391.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15391.67 1967.16,-15451.67 2400.16,-15451.67 2400.16,-15391.67 1967.16,-15391.67"/>
-<text text-anchor="start" x="1978.16" y="-15411.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">motivo_carga_id &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2312.7" y="-15412.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15331.67 1967.16,-15391.67 2400.16,-15391.67 2400.16,-15331.67 1967.16,-15331.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15331.67 1967.16,-15391.67 2400.16,-15391.67 2400.16,-15331.67 1967.16,-15331.67"/>
-<text text-anchor="start" x="1977.85" y="-15351.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">estado &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2108.69" y="-15352.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">estado_recalculo</text>
-<text text-anchor="start" x="2350.53" y="-15352.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2359.43" y="-15352.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15271.67 1967.16,-15331.67 2400.16,-15331.67 2400.16,-15271.67 1967.16,-15271.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15271.67 1967.16,-15331.67 2400.16,-15331.67 2400.16,-15271.67 1967.16,-15271.67"/>
-<text text-anchor="start" x="1978.16" y="-15291.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">calculo_id &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2312.7" y="-15292.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15211.67 1967.16,-15271.67 2400.16,-15271.67 2400.16,-15211.67 1967.16,-15211.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15211.67 1967.16,-15271.67 2400.16,-15271.67 2400.16,-15211.67 1967.16,-15211.67"/>
-<text text-anchor="start" x="1978.16" y="-15231.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">creado_at &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2227.37" y="-15232.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
-<text text-anchor="start" x="2350.07" y="-15232.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.96" y="-15232.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15151.67 1967.16,-15211.67 2400.16,-15211.67 2400.16,-15151.67 1967.16,-15151.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-15151.67 1967.16,-15211.67 2400.16,-15211.67 2400.16,-15151.67 1967.16,-15151.67"/>
-<text text-anchor="start" x="1978.16" y="-15171.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">resuelto_at &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2266.46" y="-15172.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
-<polygon fill="none" stroke="#29235c" stroke-width="2" points="1965.66,-15150.67 1965.66,-15752.67 2400.66,-15752.67 2400.66,-15150.67 1965.66,-15150.67"/>
+<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-15365.67" rx="309.01" ry="427.19"/>
+<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-15605.67 1967.16,-15665.67 2400.16,-15665.67 2400.16,-15605.67 1967.16,-15605.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15605.67 1967.16,-15665.67 2400.16,-15665.67 2400.16,-15605.67 1967.16,-15605.67"/>
+<text text-anchor="start" x="1978.25" y="-15626.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;recalculo_pendiente &#160;&#160;&#160;&#160;&#160;&#160;</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15545.67 1967.16,-15605.67 2400.16,-15605.67 2400.16,-15545.67 1967.16,-15545.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15545.67 1967.16,-15605.67 2400.16,-15605.67 2400.16,-15545.67 1967.16,-15545.67"/>
+<text text-anchor="start" x="1978.16" y="-15566.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">recalculo_id</text>
+<text text-anchor="start" x="2148.85" y="-15566.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2312.7" y="-15566.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15485.67 1967.16,-15545.67 2400.16,-15545.67 2400.16,-15485.67 1967.16,-15485.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15485.67 1967.16,-15545.67 2400.16,-15545.67 2400.16,-15485.67 1967.16,-15485.67"/>
+<text text-anchor="start" x="1978.16" y="-15505.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">indicador_id &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2241.64" y="-15506.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">smallint</text>
+<text text-anchor="start" x="2350.07" y="-15506.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.96" y="-15506.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15425.67 1967.16,-15485.67 2400.16,-15485.67 2400.16,-15425.67 1967.16,-15425.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15425.67 1967.16,-15485.67 2400.16,-15485.67 2400.16,-15425.67 1967.16,-15425.67"/>
+<text text-anchor="start" x="1978.16" y="-15445.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_desde &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2287.81" y="-15446.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2350.07" y="-15446.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.96" y="-15446.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15365.67 1967.16,-15425.67 2400.16,-15425.67 2400.16,-15365.67 1967.16,-15365.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15365.67 1967.16,-15425.67 2400.16,-15425.67 2400.16,-15365.67 1967.16,-15365.67"/>
+<text text-anchor="start" x="1978.16" y="-15385.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_hasta &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2287.81" y="-15386.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2350.07" y="-15386.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.96" y="-15386.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15305.67 1967.16,-15365.67 2400.16,-15365.67 2400.16,-15305.67 1967.16,-15305.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15305.67 1967.16,-15365.67 2400.16,-15365.67 2400.16,-15305.67 1967.16,-15305.67"/>
+<text text-anchor="start" x="1978.16" y="-15325.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">motivo_carga_id &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2312.7" y="-15326.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15245.67 1967.16,-15305.67 2400.16,-15305.67 2400.16,-15245.67 1967.16,-15245.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15245.67 1967.16,-15305.67 2400.16,-15305.67 2400.16,-15245.67 1967.16,-15245.67"/>
+<text text-anchor="start" x="1977.85" y="-15265.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">estado &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2108.69" y="-15266.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">estado_recalculo</text>
+<text text-anchor="start" x="2350.53" y="-15266.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2359.43" y="-15266.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15185.67 1967.16,-15245.67 2400.16,-15245.67 2400.16,-15185.67 1967.16,-15185.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15185.67 1967.16,-15245.67 2400.16,-15245.67 2400.16,-15185.67 1967.16,-15185.67"/>
+<text text-anchor="start" x="1978.16" y="-15205.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">calculo_id &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2312.7" y="-15206.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15125.67 1967.16,-15185.67 2400.16,-15185.67 2400.16,-15125.67 1967.16,-15125.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15125.67 1967.16,-15185.67 2400.16,-15185.67 2400.16,-15125.67 1967.16,-15125.67"/>
+<text text-anchor="start" x="1978.16" y="-15145.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">creado_at &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2227.37" y="-15146.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
+<text text-anchor="start" x="2350.07" y="-15146.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.96" y="-15146.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-15065.67 1967.16,-15125.67 2400.16,-15125.67 2400.16,-15065.67 1967.16,-15065.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-15065.67 1967.16,-15125.67 2400.16,-15125.67 2400.16,-15065.67 1967.16,-15065.67"/>
+<text text-anchor="start" x="1978.16" y="-15085.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">resuelto_at &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2266.46" y="-15086.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">datetime</text>
+<polygon fill="none" stroke="#29235c" stroke-width="2" points="1965.66,-15064.67 1965.66,-15666.67 2400.66,-15666.67 2400.66,-15064.67 1965.66,-15064.67"/>
 </a>
 </g>
 </g>
 <!-- recalculo_pendiente&#45;&gt;estado_recalculo -->
 <g id="edge102" class="edge">
 <title>recalculo_pendiente:e&#45;&gt;estado_recalculo:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15361.67C2744.97,-15361.67 2557.29,-16515.3 2631.4,-16808.67 2672.68,-16972.06 2632.74,-17147.67 2801.27,-17147.67"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15275.67C2651.62,-15275.67 2554.27,-15556.07 2603.4,-15801.67 2647.31,-16021.19 2576.85,-16591.55 2631.4,-16808.67 2672.47,-16972.11 2632.74,-17147.67 2801.27,-17147.67"/>
 </g>
 <!-- recalculo_pendiente&#45;&gt;control_carga -->
 <!-- recalculo_pendiente&#45;&gt;control_carga -->
 <g id="edge16" class="edge">
 <title>recalculo_pendiente:e&#45;&gt;control_carga:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15421.67C2549.39,-15421.67 2588.87,-15986.42 2732.22,-16011.79"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732,-16015.28 2742.27,-16012.67 2732.61,-16008.31 2732,-16015.28"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15335.67C2566.16,-15335.67 2573.56,-15985.19 2732.11,-16011.83"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.01,-16015.33 2742.27,-16012.67 2732.59,-16008.36 2732.01,-16015.33"/>
 <text text-anchor="middle" x="2733.37" y="-15983.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2394.93" y="-15431.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2394.93" y="-15345.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- recalculo_pendiente&#45;&gt;indicador -->
 <!-- recalculo_pendiente&#45;&gt;indicador -->
 <g id="edge14" class="edge">
 <title>recalculo_pendiente:e&#45;&gt;indicador:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15601.67C2556.84,-15601.67 2550.93,-15741.1 2603.4,-15887.67 2617.97,-15928.36 2599.76,-16246.23 2631.4,-16275.67 2646.24,-16289.48 3345.51,-16288.59 3361.13,-16275.67 3611.27,-16068.87 3181.26,-15561.72 3489.6,-15550.85"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15515.67C2556.84,-15515.67 2551.89,-15654.76 2603.4,-15801.67 2620.86,-15851.46 2593.01,-16239.48 2631.4,-16275.67 2646.15,-16289.57 3345.51,-16288.59 3361.13,-16275.67 3611.27,-16068.87 3181.26,-15561.72 3489.6,-15550.85"/>
 <polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="3489.97,-15554.34 3499.91,-15550.67 3489.85,-15547.34 3489.97,-15554.34"/>
 <text text-anchor="middle" x="3508.8" y="-15560.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2394.93" y="-15611.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2394.93" y="-15525.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- calculo -->
 <g id="calculo" class="node">
@@ -558,10 +564,10 @@
 <!-- recalculo_pendiente&#45;&gt;calculo -->
 <g id="edge18" class="edge">
 <title>recalculo_pendiente:e&#45;&gt;calculo:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15301.67C2556.84,-15301.67 2552.61,-15162.83 2603.4,-15015.67 2661.67,-14846.83 2561.15,-14231.72 2729.18,-14208.35"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2729.53,-14211.84 2739.27,-14207.67 2729.05,-14204.85 2729.53,-14211.84"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2401.16,-15215.67C2556.84,-15215.67 2551.97,-15076.61 2603.4,-14929.67 2674.44,-14726.72 2580.09,-14655.49 2631.4,-14446.67 2658.37,-14336.92 2624.88,-14215.28 2729.1,-14208.01"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2729.39,-14211.5 2739.27,-14207.67 2729.16,-14204.51 2729.39,-14211.5"/>
 <text text-anchor="middle" x="2730.37" y="-14217.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2394.93" y="-15311.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2394.93" y="-15225.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- calculo&#45;&gt;estado_calculo -->
 <g id="edge103" class="edge">
@@ -581,40 +587,40 @@
 <g id="calculo_entrada" class="node">
 <title>calculo_entrada</title>
 <g id="a_calculo_entrada"><a xlink:title="calculo_entrada&#10;Qué carga se usó para qué fechas en cada cálculo. Si hoy vigencia_archivo dice otra cosa para esas fechas, el cálculo quedó obsoleto.">
-<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-14749.67" rx="308.1" ry="257.27"/>
-<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-14869.67 1967.16,-14929.67 2399.16,-14929.67 2399.16,-14869.67 1967.16,-14869.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14869.67 1967.16,-14929.67 2399.16,-14929.67 2399.16,-14869.67 1967.16,-14869.67"/>
-<text text-anchor="start" x="2007.98" y="-14890.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;calculo_entrada &#160;&#160;&#160;&#160;&#160;&#160;</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14809.67 1967.16,-14869.67 2399.16,-14869.67 2399.16,-14809.67 1967.16,-14809.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14809.67 1967.16,-14869.67 2399.16,-14869.67 2399.16,-14809.67 1967.16,-14809.67"/>
-<text text-anchor="start" x="1978.16" y="-14830.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">calculo_id</text>
-<text text-anchor="start" x="2120.4" y="-14830.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2311.7" y="-14830.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14749.67 1967.16,-14809.67 2399.16,-14809.67 2399.16,-14749.67 1967.16,-14749.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14749.67 1967.16,-14809.67 2399.16,-14809.67 2399.16,-14749.67 1967.16,-14749.67"/>
-<text text-anchor="start" x="1978.16" y="-14770.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">carga_id</text>
-<text text-anchor="start" x="2100.85" y="-14770.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2311.7" y="-14770.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14689.67 1967.16,-14749.67 2399.16,-14749.67 2399.16,-14689.67 1967.16,-14689.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14689.67 1967.16,-14749.67 2399.16,-14749.67 2399.16,-14689.67 1967.16,-14689.67"/>
-<text text-anchor="start" x="1978.13" y="-14709.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">tipo_archivo &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2185.83" y="-14710.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">varchar(40)</text>
-<text text-anchor="start" x="2349.39" y="-14710.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2358.28" y="-14710.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14629.67 1967.16,-14689.67 2399.16,-14689.67 2399.16,-14629.67 1967.16,-14629.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14629.67 1967.16,-14689.67 2399.16,-14689.67 2399.16,-14629.67 1967.16,-14629.67"/>
-<text text-anchor="start" x="1978.16" y="-14650.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">fecha_inicio</text>
-<text text-anchor="start" x="2147.09" y="-14650.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2286.81" y="-14650.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2349.07" y="-14650.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-14650.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14569.67 1967.16,-14629.67 2399.16,-14629.67 2399.16,-14569.67 1967.16,-14569.67"/>
-<polygon fill="none" stroke="#29235c" points="1967.16,-14569.67 1967.16,-14629.67 2399.16,-14629.67 2399.16,-14569.67 1967.16,-14569.67"/>
-<text text-anchor="start" x="1978.16" y="-14589.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_termino &#160;&#160;&#160;</text>
-<text text-anchor="start" x="2286.81" y="-14590.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
-<text text-anchor="start" x="2349.07" y="-14590.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
-<text text-anchor="start" x="2357.96" y="-14590.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
-<polygon fill="none" stroke="#29235c" stroke-width="2" points="1966.16,-14568.67 1966.16,-14930.67 2400.16,-14930.67 2400.16,-14568.67 1966.16,-14568.67"/>
+<ellipse fill="none" stroke="black" stroke-width="0" cx="2183.16" cy="-14663.67" rx="308.1" ry="257.27"/>
+<polygon fill="#1d71b8" stroke="transparent" points="1967.16,-14783.67 1967.16,-14843.67 2399.16,-14843.67 2399.16,-14783.67 1967.16,-14783.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14783.67 1967.16,-14843.67 2399.16,-14843.67 2399.16,-14783.67 1967.16,-14783.67"/>
+<text text-anchor="start" x="2007.98" y="-14804.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#ffffff"> &#160;&#160;&#160;&#160;&#160;&#160;calculo_entrada &#160;&#160;&#160;&#160;&#160;&#160;</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14723.67 1967.16,-14783.67 2399.16,-14783.67 2399.16,-14723.67 1967.16,-14723.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14723.67 1967.16,-14783.67 2399.16,-14783.67 2399.16,-14723.67 1967.16,-14723.67"/>
+<text text-anchor="start" x="1978.16" y="-14744.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">calculo_id</text>
+<text text-anchor="start" x="2120.4" y="-14744.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2311.7" y="-14744.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14663.67 1967.16,-14723.67 2399.16,-14723.67 2399.16,-14663.67 1967.16,-14663.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14663.67 1967.16,-14723.67 2399.16,-14723.67 2399.16,-14663.67 1967.16,-14663.67"/>
+<text text-anchor="start" x="1978.16" y="-14684.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">carga_id</text>
+<text text-anchor="start" x="2100.85" y="-14684.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2311.7" y="-14684.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">bigint</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14603.67 1967.16,-14663.67 2399.16,-14663.67 2399.16,-14603.67 1967.16,-14603.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14603.67 1967.16,-14663.67 2399.16,-14663.67 2399.16,-14603.67 1967.16,-14603.67"/>
+<text text-anchor="start" x="1978.13" y="-14623.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">tipo_archivo &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2185.83" y="-14624.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">varchar(40)</text>
+<text text-anchor="start" x="2349.39" y="-14624.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2358.28" y="-14624.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14543.67 1967.16,-14603.67 2399.16,-14603.67 2399.16,-14543.67 1967.16,-14543.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14543.67 1967.16,-14603.67 2399.16,-14603.67 2399.16,-14543.67 1967.16,-14543.67"/>
+<text text-anchor="start" x="1978.16" y="-14564.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">fecha_inicio</text>
+<text text-anchor="start" x="2147.09" y="-14564.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2286.81" y="-14564.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2349.07" y="-14564.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-14564.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="#e7e2dd" stroke="transparent" points="1967.16,-14483.67 1967.16,-14543.67 2399.16,-14543.67 2399.16,-14483.67 1967.16,-14483.67"/>
+<polygon fill="none" stroke="#29235c" points="1967.16,-14483.67 1967.16,-14543.67 2399.16,-14543.67 2399.16,-14483.67 1967.16,-14483.67"/>
+<text text-anchor="start" x="1978.16" y="-14503.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">fecha_termino &#160;&#160;&#160;</text>
+<text text-anchor="start" x="2286.81" y="-14504.87" font-family="Helvetica,sans-Serif" font-style="italic" font-size="32.00" fill="#29235c">date</text>
+<text text-anchor="start" x="2349.07" y="-14504.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c"> </text>
+<text text-anchor="start" x="2357.96" y="-14504.87" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="32.00" fill="#29235c">(!)</text>
+<polygon fill="none" stroke="#29235c" stroke-width="2" points="1966.16,-14482.67 1966.16,-14844.67 2400.16,-14844.67 2400.16,-14482.67 1966.16,-14482.67"/>
 </a>
 </g>
 </g>
@@ -622,28 +628,28 @@
 <!-- calculo_entrada&#45;&gt;tipo_archivo -->
 <g id="edge26" class="edge">
 <title>calculo_entrada:e&#45;&gt;tipo_archivo:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14719.67C2559.74,-14719.67 2554.83,-14863.66 2603.4,-15015.67 2617.47,-15059.71 2598.44,-16647.26 2631.4,-16679.67 2645.85,-16693.88 3341.62,-16685.15 3361.13,-16679.67 3449.81,-16654.78 3449.42,-16573.98 3534.66,-16568.02"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14633.67C2559.74,-14633.67 2554.89,-14777.64 2603.4,-14929.67 2618.18,-14975.99 2596.75,-16645.57 2631.4,-16679.67 2645.85,-16693.89 3341.62,-16685.15 3361.13,-16679.67 3449.81,-16654.78 3449.42,-16573.98 3534.66,-16568.02"/>
 <polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="3535.03,-16571.51 3544.91,-16567.67 3534.8,-16564.51 3535.03,-16571.51"/>
 <text text-anchor="middle" x="3553.8" y="-16538.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-14729.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-14643.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- calculo_entrada&#45;&gt;control_carga -->
 <!-- calculo_entrada&#45;&gt;control_carga -->
 <g id="edge24" class="edge">
 <title>calculo_entrada:e&#45;&gt;control_carga:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14779.67C2538.58,-14779.67 2546.37,-14889.54 2603.4,-15015.67 2694.13,-15216.31 2524.04,-15988.03 2732.07,-16012.09"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2732.09,-16015.6 2742.27,-16012.67 2732.48,-16008.61 2732.09,-16015.6"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14693.67C2538.58,-14693.67 2547.08,-14803.22 2603.4,-14929.67 2651.37,-15037.35 2622.69,-15958.3 2732.32,-16010.37"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2731.74,-16013.83 2742.27,-16012.67 2733.31,-16007.01 2731.74,-16013.83"/>
 <text text-anchor="middle" x="2751.16" y="-15983.87" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-14789.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-14703.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- calculo_entrada&#45;&gt;calculo -->
 <!-- calculo_entrada&#45;&gt;calculo -->
 <g id="edge22" class="edge">
 <title>calculo_entrada:e&#45;&gt;calculo:w</title>
-<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14839.67C2715.5,-14839.67 2426.84,-14221.18 2729.21,-14207.89"/>
-<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2729.35,-14211.39 2739.27,-14207.67 2729.19,-14204.39 2729.35,-14211.39"/>
+<path fill="none" stroke="#29235c" stroke-width="3" d="M2400.16,-14753.67C2682.33,-14753.67 2459.2,-14220.92 2729.04,-14207.91"/>
+<polygon fill="#29235c" stroke="#29235c" stroke-width="3" points="2729.35,-14211.41 2739.27,-14207.67 2729.19,-14204.41 2729.35,-14211.41"/>
 <text text-anchor="middle" x="2748.16" y="-14217.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">1</text>
-<text text-anchor="middle" x="2393.93" y="-14849.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
+<text text-anchor="middle" x="2393.93" y="-14763.27" font-family="Helvetica,sans-Serif" font-size="32.00" fill="#29235c">*</text>
 </g>
 <!-- parametro -->
 <g id="parametro" class="node">
