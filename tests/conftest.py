@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import io
 from types import SimpleNamespace
 
@@ -55,21 +56,48 @@ class CursorFalso:
         elif sql.startswith("INSERT INTO control_carga"):
             self.conn.siguiente += 1
             self.lastrowid = self.conn.siguiente
-            self.conn.control[self.lastrowid] = {"tipo": params[0], "sha": params[3], "estado": "PROCESANDO"}
+            self.conn.control[self.lastrowid] = {
+                "tipo": params[0], "sha": params[3], "blob": params[2], "estado": "PROCESANDO"
+            }
         elif sql.startswith("UPDATE control_carga SET estado='PROCESANDO'"):
-            self.conn.control[params[-1]]["estado"] = "PROCESANDO"
+            self.conn.control[params[-1]].update(estado="PROCESANDO", blob=params[1])
         elif sql.startswith("UPDATE control_carga SET estado='COMPLETADO'"):
             self.conn.control[params[-1]]["estado"] = "COMPLETADO"
         elif sql.startswith("UPDATE control_carga SET estado='ERROR'"):
-            self.conn.control[params[-1]].update(estado="ERROR", mensaje=params[2])
+            self.conn.control[params[-1]].update(estado="ERROR", mensaje=params[2], blob=params[3])
+        elif sql.startswith("SELECT vigencia_id, carga_id, fecha_inicio, fecha_termino, rango_desde, rango_hasta, origen FROM vigencia_archivo"):
+            tipo, hasta, desde = params
+            self._resultados = [
+                (v["vigencia_id"], v["carga_id"], v["fecha_inicio"], v["fecha_termino"], v["rango_desde"], v["rango_hasta"], v["origen"])
+                for v in sorted(self.conn.vigencias, key=lambda v: v["fecha_inicio"])
+                if v["tipo"] == tipo and v["vigente"] and v["fecha_inicio"] <= hasta and v["fecha_termino"] >= desde
+            ]
+        elif sql.startswith("UPDATE vigencia_archivo SET vigente = 0"):
+            self.conn.guardar_vigencias()
+            carga, _, *ids = params
+            for v in self.conn.vigencias:
+                if v["vigencia_id"] in ids:
+                    v.update(vigente=0, reemplazada_por=carga)
         else:
             raise AssertionError(f"SQL no esperado: {sql}")
 
     def executemany(self, sql, filas):
+        if " ".join(sql.split()).startswith("INSERT INTO vigencia_archivo"):
+            self.conn.guardar_vigencias()
+            for tipo, carga, inicio, termino, desde, hasta, origen, *_ in filas:
+                self.conn.vigencias.append({
+                    "vigencia_id": len(self.conn.vigencias) + 1, "tipo": tipo, "carga_id": carga,
+                    "fecha_inicio": inicio, "fecha_termino": termino, "rango_desde": desde,
+                    "rango_hasta": hasta, "origen": origen, "vigente": 1, "reemplazada_por": None,
+                })
+            return
         self.conn.pendientes.extend(filas)
 
     def fetchone(self):
         return self._resultado
+
+    def fetchall(self):
+        return self._resultados
 
 
 class ConexionFalsa:
@@ -78,16 +106,33 @@ class ConexionFalsa:
         self.siguiente = 0
         self.filas: list[tuple] = []
         self.pendientes: list[tuple] = []
+        self.vigencias: list[dict] = []
+        self._vigencias_antes = None
 
     def cursor(self):
         return CursorFalso(self)
 
+    def guardar_vigencias(self):
+        if self._vigencias_antes is None:
+            self._vigencias_antes = copy.deepcopy(self.vigencias)
+
+    def vigentes(self, tipo):
+        """[(carga_id, inicio, termino)] vigentes del tipo, ordenados por fecha."""
+        return sorted(
+            (v["carga_id"], v["fecha_inicio"], v["fecha_termino"])
+            for v in self.vigencias if v["tipo"] == tipo and v["vigente"]
+        )
+
     def commit(self):
         self.filas.extend(self.pendientes)
         self.pendientes.clear()
+        self._vigencias_antes = None
 
     def rollback(self):
         self.pendientes.clear()
+        if self._vigencias_antes is not None:
+            self.vigencias = self._vigencias_antes
+            self._vigencias_antes = None
 
 
 @pytest.fixture

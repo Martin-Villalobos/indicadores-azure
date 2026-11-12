@@ -18,7 +18,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 
 | Carpeta | Qué hay |
 |---|---|
-| `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `lectores/` (uno por tipo de archivo) |
+| `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `vigencias.py` (qué carga rige cada fecha), `lectores/` (uno por tipo de archivo) |
 | `sql/` | Tablas que necesita el job |
 | `docker/` | Imagen del job |
 | `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` lista los reportes y `/api/reporte/<id>` abre uno) |
@@ -32,8 +32,8 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 
 ## Agregar un tipo de archivo
 
-1. Crear `src/indicadores_azure/lectores/<tipo>.py` con `TABLA`, `COLUMNAS`, `EXTENSIONES` y `leer(contenido) -> filas`. Los errores para el usuario se lanzan con `ErrorDeCarga` diciendo hoja, fila y columna.
-2. Registrarlo en `lectores/__init__.py` y crear la tabla en `sql/`.
+1. Crear `src/indicadores_azure/lectores/<tipo>.py` con `TABLA`, `COLUMNAS`, `EXTENSIONES`, `VIGENCIA` (columnas con el rango de fechas que cubre el archivo) y `leer(contenido) -> filas`. Los errores para el usuario se lanzan con `ErrorDeCarga` diciendo hoja, fila y columna.
+2. Registrarlo en `lectores/__init__.py`, agregarlo a `tipo_archivo` (`sql/03_vigencias.sql`) y crear la tabla en `sql/`.
 3. Si se sube desde la web: agregarlo a `TIPOS` en `web/api/cargar/__init__.py` y al `<select id="tipo">` de `web/app/index.html`.
 4. Pruebas en `tests/`, luego nueva imagen del job.
 

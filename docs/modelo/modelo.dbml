@@ -64,7 +64,7 @@ Enum estado_recalculo {
 }
 
 Table tipo_archivo {
-  codigo varchar(40) [pk, note: 'ANEXO1, ANEXO3, ANEXO4, ANEXO5, VELOCIDADES, EVENTOS_EXOGENOS...']
+  codigo varchar(40) [pk, note: 'anexo1, anexo3, velocidades, exclusiones... (= carpeta del blob)']
   nombre varchar(100) [not null]
   cobertura varchar(10) [not null, note: 'RANGO (anexos: vigencia del PO/PE) | DIA (velocidades) | MES (exógenos)']
   Note: 'Catálogo de tipos de archivo. Generaliza programa_ejecucion de indicadores-bi.'
@@ -74,7 +74,7 @@ Table control_carga {
   carga_id bigint [pk, increment]
   tipo_archivo varchar(40) [not null, ref: > tipo_archivo.codigo]
   nombre_archivo varchar(255) [not null]
-  blob_nombre varchar(400) [not null]
+  blob_nombre varchar(400) [not null, note: 'ruta del archivo en el contenedor cargas: <tipo>/procesados/... o <tipo>/errores/...']
   hash_sha256 char(64) [not null]
   estado estado_carga [not null]
   subido_por varchar(255)
@@ -97,6 +97,8 @@ Table vigencia_archivo {
   carga_id bigint [not null, ref: > control_carga.carga_id]
   fecha_inicio date [not null]
   fecha_termino date [not null]
+  rango_desde date [not null, note: 'rango completo de la carga (decide quién gana)']
+  rango_hasta date [not null]
   vigente boolean [not null, default: true]
   reemplazada_por bigint [ref: > control_carga.carga_id, note: 'carga que tapó este tramo']
   origen varchar(10) [not null, default: 'CARGA', note: 'CARGA (al subir el archivo) | MANUAL (cambiada desde la web)']
@@ -138,7 +140,7 @@ Table indicador_fuente {
   indexes {
     (indicador_id, tipo_archivo) [pk]
   }
-  Note: 'De qué tipos de archivo depende cada indicador (ICFP: ANEXO3, VELOCIDADES, EVENTOS_EXOGENOS).'
+  Note: 'De qué tipos de archivo depende cada indicador (ICFP: anexo3, velocidades, exclusiones).'
 }
 
 Table recalculo_pendiente {
@@ -229,9 +231,11 @@ Table raw_anexo3 {
   id bigint [pk, increment]
   carga_id bigint [not null, ref: > control_carga.carga_id]
   numero_fila int [not null]
-  unidad_de_servicio varchar(40)
-  fecha_inicio date [note: 'vigencia según nombre/hoja del archivo']
-  fecha_termino date
+  hoja varchar(100) [not null]
+  anio smallint
+  fecha_inicio date [not null, note: 'cabecera FECHA INICIO = vigencia']
+  fecha_termino date [not null]
+  unidad_de_servicio varchar(40) [not null]
   codigo_ts_servicio varchar(20) [not null]
   codigo_usuario_servicio varchar(20)
   sentido varchar(20) [not null]
@@ -252,36 +256,43 @@ Table raw_velocidades {
   id bigint [pk, increment]
   carga_id bigint [not null, ref: > control_carga.carga_id]
   numero_fila int [not null]
-  un varchar(20)
-  fecha date [not null]
-  tipo_dia varchar(20)
-  servicio varchar(20)
-  sentido varchar(20)
-  patente varchar(10)
-  inicio time
+  un varchar(20) [not null]
+  operador varchar(80)
+  servicio varchar(20) [not null]
+  patente varchar(12)
+  sentido varchar(20) [not null]
+  inicio time [not null]
+  intervalo_salida time
   control time
   fin time
-  tiempo varchar(20)
   distancia_m decimal(14,3)
-  velocidad_km_hr decimal(12,4)
-  estado varchar(10) [note: 'OK / NOK...']
-  periodo varchar(30)
-  Note: 'Archivo diario de velocidades DTPM, una fila por expedición.'
+  tiempo time
+  velocidad_km_hr decimal(12,6)
+  capacidad int
+  estado varchar(10) [not null, note: 'OK / NOK...']
+  fecha date [not null, note: '= vigencia (un día)']
+  dia tinyint
+  tipo_dia varchar(20) [not null]
+  periodo varchar(60)
+  cada_5_minutos time
+  cada_media_hora time
+  Note: 'Archivo diario de velocidades DTPM (hoja velocidad), una fila por expedición. Sólo U16.'
 }
 
-Table raw_eventos_exogenos {
+Table raw_exclusiones {
   id bigint [pk, increment]
   carga_id bigint [not null, ref: > control_carga.carga_id]
+  hoja varchar(20) [not null, note: 'ICFP-IE | IP-Base | IP-Extra']
   numero_fila int [not null]
-  fecha date
-  tipo_evento varchar(60)
-  servicio varchar(20)
-  sentido varchar(20)
-  hora_desde time
-  hora_hasta time
-  resolucion_dtpm varchar(40) [note: 'aceptado / rechazado']
-  observacion text
-  Note: 'Respuesta DTPM a eventos exógenos (y eventos complejos propios). Columnas a confirmar con el archivo real.'
+  fecha date [not null]
+  unidad_servicios varchar(10) [not null, note: 'U16']
+  codigo_ts_servicio varchar(20) [not null, note: '* = todos']
+  sentido varchar(20) [not null, note: '* = todos']
+  periodo varchar(10) [note: 'ICFP-IE: 1-72 (hora por tipo de día) o *']
+  id_expedicion varchar(40) [note: 'IP-Base']
+  correlativo_paradero varchar(20) [note: 'IP-Base']
+  Note: '''Exclusiones mensuales del DTPM por eventos exógenos (archivo MMM-AAAA-Exclusiones.xlsx).
+Vigencia: los meses completos que cubren sus fechas.'''
 }
 
 // ───────────────────────────── maestros ─────────────────────────────
@@ -555,7 +566,7 @@ TableGroup raw {
   raw_anexo1
   raw_anexo3
   raw_velocidades
-  raw_eventos_exogenos
+  raw_exclusiones
 }
 
 TableGroup maestros {

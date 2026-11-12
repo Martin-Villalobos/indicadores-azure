@@ -48,3 +48,7 @@ INSERT INTO raw_anexo1 (carga_id, numero_fila, unidad_servicios, anio, codigo_ts
   (1, 40, 'U1', 2026, 'T301 00R', '301', 'REGRESO', 'LABORAL', 4, '17:30:00', '20:59:59', '2026-03-01', '2026-12-31'),
   (1, 41, 'U1', 2026, 'T301 00R', '301', 'REGRESO', 'SÁBADO', 1, '05:30:00', '06:29:59', '2026-03-01', '2026-12-31'),
   (1, 42, 'U1', 2026, 'T301 00R', '301', 'REGRESO', 'SÁBADO', 2, '06:30:00', '08:29:59', '2026-03-01', '2026-12-31');
+
+INSERT INTO vigencia_archivo (tipo_archivo, carga_id, fecha_inicio, fecha_termino, rango_desde, rango_hasta,
+                              origen, creado_por, creado_at) VALUES
+  ('anexo1', 1, '2026-03-01', '2026-12-31', '2026-03-01', '2026-12-31', 'CARGA', 'dev@local', '2026-03-01 09:00:05');

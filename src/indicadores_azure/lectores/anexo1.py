@@ -24,6 +24,7 @@ from ..control import ErrorDeCarga
 
 TABLA = "raw_anexo1"
 EXTENSIONES = {".xlsx"}
+VIGENCIA = ("fecha_inicio", "fecha_termino")
 COLUMNAS = (
     "numero_fila", "unidad_servicios", "anio", "codigo_ts_servicio",
     "codigo_usuario_servicio", "sentido", "tipo_dia", "tramo_horario",
