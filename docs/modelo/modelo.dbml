@@ -97,7 +97,6 @@ Table vigencia_archivo {
   carga_id bigint [not null, ref: > control_carga.carga_id]
   fecha_inicio date [not null]
   fecha_termino date [not null]
-  alcance varchar(10) [not null, note: 'GENERAL (PO del periodo) | ESPECIAL (pocos días, p. ej. 18-19 sep)']
   vigente boolean [not null, default: true]
   reemplazada_por bigint [ref: > control_carga.carga_id, note: 'carga que tapó este tramo']
   creado_at datetime [not null]
@@ -108,12 +107,11 @@ Table vigencia_archivo {
   }
   Note: '''Qué carga rige cada fecha, por tipo de archivo. Regla: entre filas vigentes del mismo tipo
 los rangos no se cruzan, así que para (tipo, fecha) hay a lo sumo una carga vigente.
-Reglas al registrar una carga:
-  - ESPECIAL: tapa solo sus días; el GENERAL se parte en el tramo de antes y el de después.
-  - GENERAL: reemplaza al GENERAL anterior en su rango, pero respeta los ESPECIAL vigentes
-    (se parte alrededor de ellos), aunque el general se cargue después.
-  - Un archivo corregido del mismo alcance y mismo rango reemplaza al anterior entero.
-Ej.: Anexo jul-nov (GENERAL) + Anexo 18-19 sep (ESPECIAL) -> jul-17sep, 18-19sep, 20sep-nov.
+Todos los anexos son iguales; solo cambian sus fechas. Regla al registrar una carga, por cada fecha:
+  - gana el archivo cuyo rango completo es más corto (el más específico);
+  - si el rango es igual, gana el cargado después (corrección del mismo anexo).
+Así un anexo de 18-19 sep manda sobre uno de jul-nov aunque el de jul-nov se recargue después.
+Ej.: jul-nov + 18-19 sep -> jul-17sep (jul-nov), 18-19sep (18-19 sep), 20sep-nov (jul-nov).
 Las filas reemplazadas quedan con vigente = 0 como historia.'''
 }
 
