@@ -25,13 +25,12 @@ class Cursor:
 class Conexion:
     def __init__(self):
         self.registro = {}
-        self.commits = 0
 
     def cursor(self):
         return Cursor(self)
 
     def commit(self):
-        self.commits += 1
+        pass
 
 
 def _raiz(tmp_path):
@@ -44,12 +43,24 @@ def _raiz(tmp_path):
     (tmp_path / "anexo3" / "c.xlsx").write_bytes(b"c")
     (tmp_path / "anexo4").mkdir()
     (tmp_path / "anexo4" / "d.xlsx").write_bytes(b"d")  # tipo sin lector: se ignora
+    (tmp_path / "README.md").write_bytes(b"#")
     return tmp_path
 
 
-def test_sube_en_orden_con_metadatos(tmp_path, contenedor):
+def test_publicar_copia_lo_que_falta(tmp_path, contenedor):
+    raiz = _raiz(tmp_path)
+    assert datos_iniciales.publicar(contenedor, raiz) == [
+        "iniciales/anexo1/2026/a.xlsx", "iniciales/anexo1/b.xlsx", "iniciales/anexo3/c.xlsx"]
+    assert datos_iniciales.publicar(contenedor, raiz) == []  # ya están
+    (raiz / "anexo3" / "c.xlsx").write_bytes(b"cambiado")
+    assert datos_iniciales.publicar(contenedor, raiz) == ["iniciales/anexo3/c.xlsx"]
+    assert datos_iniciales.publicar(contenedor, tmp_path / "no_existe") == []
+
+
+def test_sube_a_entrada_en_orden_con_metadatos(tmp_path, contenedor):
     conn = Conexion()
-    subidos = datos_iniciales.subir_pendientes(conn, contenedor, _raiz(tmp_path))
+    datos_iniciales.publicar(contenedor, _raiz(tmp_path))
+    subidos = datos_iniciales.subir_pendientes(conn, contenedor)
     assert subidos == [
         "anexo1/entrada/00000000_0001_a.xlsx",
         "anexo1/entrada/00000000_0002_b.xlsx",
@@ -63,21 +74,22 @@ def test_sube_en_orden_con_metadatos(tmp_path, contenedor):
 
 def test_no_sube_dos_veces_aunque_se_haya_procesado(tmp_path, contenedor):
     conn = Conexion()
-    raiz = _raiz(tmp_path)
-    datos_iniciales.subir_pendientes(conn, contenedor, raiz)
-    contenedor.blobs.clear()  # el job ya los movió a procesados (o se eliminaron en la web)
-    assert datos_iniciales.subir_pendientes(conn, contenedor, raiz) == []
-    assert contenedor.blobs == {}
+    datos_iniciales.publicar(contenedor, _raiz(tmp_path))
+    datos_iniciales.subir_pendientes(conn, contenedor)
+    for nombre in [n for n in contenedor.blobs if "/entrada/" in n]:
+        del contenedor.blobs[nombre]  # el job ya los movió a procesados (o se eliminaron en la web)
+    assert datos_iniciales.subir_pendientes(conn, contenedor) == []
 
 
 def test_archivo_nuevo_o_renombrado(tmp_path, contenedor):
     conn = Conexion()
     raiz = _raiz(tmp_path)
-    datos_iniciales.subir_pendientes(conn, contenedor, raiz)
-    (raiz / "anexo1" / "b.xlsx").rename(raiz / "anexo1" / "b2.xlsx")  # mismo contenido: no se sube
-    (raiz / "anexo3" / "nuevo.xlsx").write_bytes(b"nuevo")
-    assert datos_iniciales.subir_pendientes(conn, contenedor, raiz) == ["anexo3/entrada/00000000_0004_nuevo.xlsx"]
+    datos_iniciales.publicar(contenedor, raiz)
+    datos_iniciales.subir_pendientes(conn, contenedor)
+    contenedor.subir("iniciales/anexo1/b2.xlsx", b"b")  # mismo contenido con otro nombre: no se sube
+    contenedor.subir("iniciales/anexo3/nuevo.xlsx", b"nuevo")
+    assert datos_iniciales.subir_pendientes(conn, contenedor) == ["anexo3/entrada/00000000_0005_nuevo.xlsx"]
 
 
-def test_sin_carpeta_no_hace_nada(tmp_path, contenedor):
-    assert datos_iniciales.subir_pendientes(Conexion(), contenedor, tmp_path / "no_existe") == []
+def test_sin_blobs_no_consulta_la_base(contenedor):
+    assert datos_iniciales.subir_pendientes(None, contenedor) == []
