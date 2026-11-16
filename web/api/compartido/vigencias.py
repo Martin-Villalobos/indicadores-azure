@@ -452,3 +452,23 @@ def cambiar_fechas(cur, carga_id: int, desde: date, hasta: date, *, usuario: str
         )
         encolar_recalculos(cur, r.recalculos, carga_id)
     return r
+
+
+def completar_faltantes(cur, usuario: str = "sistema") -> list[tuple[str, list[Cambio]]]:
+    """Arma los tramos de las cargas COMPLETADO que tienen rango pero ninguna fila en vigencia_archivo
+    (cargas hechas antes de que existieran las vigencias) y encola el recálculo de lo que cambie.
+    El job lo llama al partir; si no falta nada, no hace nada."""
+
+    cur.execute(
+        """SELECT c.tipo_archivo, MIN(c.vigencia_desde), MAX(c.vigencia_hasta) FROM control_carga c
+           WHERE c.estado = 'COMPLETADO' AND c.vigencia_desde IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM vigencia_archivo v WHERE v.carga_id = c.carga_id)
+           GROUP BY c.tipo_archivo"""
+    )
+    resultado = []
+    for tipo, desde, hasta in cur.fetchall():
+        cambios = reconstruir(cur, tipo, desde, hasta, usuario=usuario)
+        if cambios:
+            encolar_recalculos(cur, _recalculos(cur, tipo, cambios))
+            resultado.append((tipo, cambios))
+    return resultado

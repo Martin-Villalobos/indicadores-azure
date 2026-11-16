@@ -60,6 +60,7 @@
     .accion input[type=date] { font:inherit; padding:6px; border:1px solid var(--line); border-radius:6px; }
     .boton.peligro { background:var(--err); }
     table.maestro td.archivo { white-space:normal; min-width:220px; }
+    table.maestro td.acciones { white-space:normal; min-width:170px; }
     table.maestro tr.nuevo-archivo td { border-top:2px solid var(--line); }
     .chip { display:inline-block; font-size:.75rem; padding:1px 6px; border-radius:10px; background:#fff3c4; color:#7a5b00; margin-left:4px; }
     .chip.gris { background:#eef1f4; color:var(--muted); }
@@ -482,7 +483,7 @@
     }
 
     function botones(a) {
-      const td = el("td");
+      const td = el("td", null, "acciones");
       const desc = el("a", "Descargar");
       desc.href = `/api/archivos?descargar=${a.carga_id}`;
       desc.style.marginRight = "6px";
