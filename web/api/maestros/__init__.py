@@ -31,9 +31,19 @@ TABLAS = {
             ("ppu", "texto", True, "Patente"),
             ("tipo_bus", "texto", False, "Tipo de bus"),
             ("plazas", "entero", False, "Plazas"),
+            ("terminal", "texto", False, "Terminal"),
         ],
         "extra": ["origen", "actualizado_por", "actualizado_at"],
         "manual": {"origen": "MANUAL", "carga_id": None},
+    },
+    "dim_terminal": {
+        "nombre": "Terminales",
+        "descripcion": "Terminales a las que se asignan buses y servicios. Renombrar una la cambia en todas partes.",
+        "columnas": [
+            ("terminal", "texto", True, "Terminal"),
+        ],
+        "extra": ["actualizado_por", "actualizado_at"],
+        "manual": {},
     },
     "dim_servicio_terminal": {
         "nombre": "Terminal por servicio",
@@ -186,7 +196,15 @@ def _main(req: func.HttpRequest) -> func.HttpResponse:
                 return _respuesta({"estado": "ERROR", "mensaje": "accion debe ser guardar o borrar."}, 400)
             usuario = _usuario(req)
             try:
-                _guardar(cur, tabla, cuerpo.get("fila") or {}, usuario, accion)
+                try:
+                    _guardar(cur, tabla, cuerpo.get("fila") or {}, usuario, accion)
+                except Exception as exc:  # pymysql.err.IntegrityError: terminal que no existe o en uso
+                    if (exc.args or [None])[0] in (1451, 1452):
+                        raise ErrorUsuario(
+                            "Esa terminal está en uso por buses o servicios: cámbialos antes de borrarla."
+                            if (exc.args or [None])[0] == 1451 else
+                            "La terminal no existe: agrégala primero en la tabla Terminales.") from None
+                    raise
             except ErrorUsuario as exc:
                 conn.rollback()
                 return _respuesta({"estado": "ERROR", "mensaje": str(exc)}, 400)

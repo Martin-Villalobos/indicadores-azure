@@ -19,7 +19,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 | Carpeta | Qué hay |
 |---|---|
 | `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `vigencias.py` (qué carga rige cada fecha), `lectores/` (uno por tipo de archivo), `icfp/` (cálculo del ICFP) y `recalculo.py` (cola de recálculos después de cada carga) |
-| `sql/` | Tablas que necesita el job |
+| `sql/` | Tablas que necesita el job. Se aplican solas: el job corre los archivos pendientes al partir (`migracion_aplicada`) |
 | `docker/` | Imagen del job |
 | `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` lista los reportes y `/api/reporte/<id>` abre uno) |
 | `local/` | Script rclone que envía Reporte 1.117 y Velocidades desde el espejo FTP de la máquina local |
@@ -44,7 +44,7 @@ Cada corrida es un `calculo` nuevo; `v_icfp_dashboard` muestra el último por fe
 ## Agregar un tipo de archivo
 
 1. Crear `src/indicadores_azure/lectores/<tipo>.py` con `TABLA`, `COLUMNAS`, `EXTENSIONES`, `VIGENCIA` (columnas con el rango de fechas que cubre el archivo) y `leer(contenido) -> filas`. Los errores para el usuario se lanzan con `ErrorDeCarga` diciendo hoja, fila y columna.
-2. Registrarlo en `lectores/__init__.py`, agregarlo a `tipo_archivo` (`sql/03_vigencias.sql`) y crear la tabla en `sql/`.
+2. Registrarlo en `lectores/__init__.py`, agregarlo a `tipo_archivo` (`sql/03_vigencias.sql`) y crear la tabla en un archivo nuevo de `sql/` (idempotente; se aplica solo al desplegar).
 3. Si se sube desde la web: agregarlo a `TIPOS` en `web/api/cargar/__init__.py` y al `<select id="tipo">` de `web/app/index.html`.
 4. Pruebas en `tests/`, luego nueva imagen del job.
 

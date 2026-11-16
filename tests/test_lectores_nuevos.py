@@ -109,8 +109,24 @@ def test_flota_csv_punto_y_coma_y_patente_normalizada():
     from indicadores_azure.lectores import flota
 
     filas = list(flota.leer("ppu;tipo_bus;capacidad\nAB-CD12;B1;90\nEFGH34;C1;\n".encode()))
-    assert filas == [(2, "ABCD12", "B1", 90), (3, "EFGH34", "C1", None)]
+    assert filas == [(2, "ABCD12", "B1", 90, None), (3, "EFGH34", "C1", None, None)]
     with pytest.raises(ErrorDeCarga, match="repetida"):
         list(flota.leer(b"ppu,tipo_bus,capacidad\nAB12,B1,90\nab-12,B1,90\n"))
-    with pytest.raises(ErrorDeCarga, match="CAPACIDAD"):
-        list(flota.leer(b"ppu,tipo\nAB12,B1\n"))
+    with pytest.raises(ErrorDeCarga, match="PPU"):
+        list(flota.leer(b"patentes,tipo\nAB12,B1\n"))
+
+
+def test_flota_sin_capacidad_usa_tipologia_y_lee_terminal():
+    from indicadores_azure.lectores import flota
+
+    contenido = (
+        '"id","terminal","ppu","tipo_bus","device_code","fecha"\n'
+        '1,Gabriela,VFJD79,B2V,"250106100001",\n'
+        '2,Jardín Alto,VLZV91,C2D,"250210020628","2026-03-07"\n'
+        '3,,ABCD12,A2V,"1",\n'
+    ).encode()
+    assert list(flota.leer(contenido)) == [
+        (2, "VFJD79", "B2V", 90, "Gabriela"),
+        (3, "VLZV91", "C2D", 150, "Jardín Alto"),
+        (4, "ABCD12", "A2V", 60, None),
+    ]

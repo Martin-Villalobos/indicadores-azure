@@ -348,7 +348,13 @@
 
     // Formulario para agregar un registro nuevo, armado con las columnas de la tabla.
     const formM = document.getElementById("maestro-form");
-    const SUGERENCIAS = { tipo_bus: ["A1", "A2", "B1", "B2", "C1", "C2"] };
+    const SUGERENCIAS = { tipo_bus: ["A1", "A2", "B1", "B2", "C1", "C2"], terminal: [] };
+    // Las terminales sugeridas salen de la tabla Terminales.
+    fetch("/api/maestros?tabla=dim_terminal").then(r => r.ok ? r.json() : { filas: [] })
+      .then(d => { SUGERENCIAS.terminal = (d.filas || []).map(f => f.terminal);
+                   const l = document.getElementById("sug-terminal");
+                   if (l) l.replaceChildren(...SUGERENCIAS.terminal.map(v => new Option(v))); })
+      .catch(() => {});
 
     function armarFormulario(t) {
       const titulo = document.createElement("h3");

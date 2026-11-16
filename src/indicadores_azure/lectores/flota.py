@@ -1,8 +1,9 @@
 """Maestro de flota: patente, tipo de bus y plazas (lo que en indicadores-bi es bi.buses + bi.tipo_bus).
 
 Formato: CSV (separado por coma o punto y coma) o Excel con una fila de encabezados que trae
-PPU (o PATENTE), TIPO_BUS (o TIPO BUS / TIPOLOGIA) y CAPACIDAD (o PLAZAS). Sirve directo el
-resultado de:
+PPU (o PATENTE), TIPO_BUS (o TIPO BUS / TIPOLOGIA) y, opcionales, CAPACIDAD (o PLAZAS) y TERMINAL.
+Sin capacidad, las plazas salen de la tipología según contrato, Tabla 5 (A=60, B=90, C=150, por la
+letra inicial del tipo de bus). Sirve directo el resultado de:
 
     SELECT b.ppu, b.tipo_bus, t.capacidad FROM bi.buses b LEFT JOIN bi.tipo_bus t ON t.id = b.tipo_bus
 
@@ -21,13 +22,16 @@ from ._comun import abrir_excel, clave, entero, texto
 
 TABLA = "raw_flota"
 EXTENSIONES = {".csv", ".xlsx"}
-COLUMNAS = ("numero_fila", "ppu", "tipo_bus", "plazas")
+COLUMNAS = ("numero_fila", "ppu", "tipo_bus", "plazas", "terminal")
 
 ALIAS = {
     "ppu": ("PPU", "PATENTE"),
     "tipo_bus": ("TIPO_BUS", "TIPO BUS", "TIPOLOGIA", "TIPO"),
     "plazas": ("CAPACIDAD", "PLAZAS"),
+    "terminal": ("TERMINAL",),
 }
+OPCIONALES = {"plazas", "terminal"}
+PLAZAS_TIPOLOGIA = {"A": 60, "B": 90, "C": 150}  # Contrato, Tabla 5
 
 
 def patente(valor: object) -> str:
@@ -58,7 +62,7 @@ def leer(contenido: bytes) -> Iterator[tuple]:
     indices = {}
     for campo, alias in ALIAS.items():
         i = next((encabezados.index(a) for a in alias if a in encabezados), None)
-        if i is None:
+        if i is None and campo not in OPCIONALES:
             raise ErrorDeCarga(f"Falta la columna {alias[0]} (o {', '.join(alias[1:])}).")
         indices[campo] = i
     vistas: dict[str, int] = {}
@@ -72,7 +76,13 @@ def leer(contenido: bytes) -> Iterator[tuple]:
         if ppu in vistas:
             raise ErrorDeCarga(f"Fila {numero}: la patente {ppu} está repetida (fila {vistas[ppu]}).")
         vistas[ppu] = numero
-        plazas = entero(valores[indices["plazas"]], f"Fila {numero}, columna CAPACIDAD")
-        if plazas is not None and plazas <= 0:
-            raise ErrorDeCarga(f"Fila {numero}: capacidad {plazas} no válida.")
-        yield (numero, ppu, texto(valores[indices["tipo_bus"]]), plazas)
+        tipo_bus = texto(valores[indices["tipo_bus"]])
+        plazas = None
+        if indices["plazas"] is not None:
+            plazas = entero(valores[indices["plazas"]], f"Fila {numero}, columna CAPACIDAD")
+            if plazas is not None and plazas <= 0:
+                raise ErrorDeCarga(f"Fila {numero}: capacidad {plazas} no válida.")
+        else:
+            plazas = PLAZAS_TIPOLOGIA.get((tipo_bus or " ")[0].upper())
+        terminal = texto(valores[indices["terminal"]]) if indices["terminal"] is not None else None
+        yield (numero, ppu, tipo_bus, plazas, terminal or None)
