@@ -19,10 +19,17 @@ log = logging.getLogger("indicadores_azure")
 
 
 def sincronizar_flota(cur, carga_id: int, usuario: str | None = None) -> int:
+    # Terminales nuevas del archivo: se crean (y se pueden corregir en Datos maestros).
     cur.execute(
-        """INSERT INTO dim_bus (ppu, tipo_bus, plazas, origen, carga_id, actualizado_por, actualizado_at)
-           SELECT ppu, tipo_bus, plazas, 'CARGA', carga_id, %s, %s FROM raw_flota WHERE carga_id = %s
-           ON DUPLICATE KEY UPDATE tipo_bus = VALUES(tipo_bus), plazas = VALUES(plazas), origen = 'CARGA',
+        """INSERT IGNORE INTO dim_terminal (terminal, actualizado_por, actualizado_at)
+           SELECT DISTINCT terminal, %s, %s FROM raw_flota WHERE carga_id = %s AND terminal IS NOT NULL""",
+        (usuario, datetime.now(), carga_id),
+    )
+    cur.execute(
+        """INSERT INTO dim_bus (ppu, tipo_bus, plazas, terminal, origen, carga_id, actualizado_por, actualizado_at)
+           SELECT ppu, tipo_bus, plazas, terminal, 'CARGA', carga_id, %s, %s FROM raw_flota WHERE carga_id = %s
+           ON DUPLICATE KEY UPDATE tipo_bus = VALUES(tipo_bus), plazas = VALUES(plazas),
+             terminal = COALESCE(VALUES(terminal), dim_bus.terminal), origen = 'CARGA',
              carga_id = VALUES(carga_id), actualizado_por = VALUES(actualizado_por),
              actualizado_at = VALUES(actualizado_at)""",
         (usuario, datetime.now(), carga_id),

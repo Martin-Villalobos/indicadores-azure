@@ -24,6 +24,10 @@ class Cursor:
             self.db.registro[params[0]] = params[1]
         elif "FALLA" in sql:
             raise RuntimeError("error de SQL")
+        elif sql.startswith("ALTER TABLE") and sql in self.db.alter_hechos:
+            raise RuntimeError(1060, "Duplicate column name")
+        elif sql.startswith("ALTER TABLE"):
+            self.db.alter_hechos.add(sql)
         else:
             self._res = []
 
@@ -37,6 +41,7 @@ class Cursor:
 class Base:
     def __init__(self):
         self.registro, self.ejecutadas, self.candado_libre, self.commits = {}, [], True, 0
+        self.alter_hechos = set()
 
     def cursor(self):
         return Cursor(self)
@@ -82,6 +87,15 @@ def test_archivo_nuevo_o_modificado_se_aplica(sql):
     (sql / "02_b.sql").write_text("CREATE TABLE IF NOT EXISTS b (y INT);\nINSERT IGNORE INTO b VALUES (2);\n")
     (sql / "03_c.sql").write_text("CREATE OR REPLACE VIEW c AS SELECT 1;\n")
     assert migraciones.aplicar(base, sql) == ["02_b.sql", "03_c.sql"]
+
+
+def test_alter_ya_aplicado_se_salta(sql):
+    base = Base()
+    (sql / "03_c.sql").write_text("ALTER TABLE a ADD COLUMN z INT;\n")
+    migraciones.aplicar(base, sql)
+    (sql / "03_c.sql").write_text("-- cambio\nALTER TABLE a ADD COLUMN z INT;\nCREATE TABLE IF NOT EXISTS d (w INT);\n")
+    assert migraciones.aplicar(base, sql) == ["03_c.sql"]
+    assert "CREATE TABLE IF NOT EXISTS d (w INT)" in base.ejecutadas
 
 
 def test_falla_corta_no_registra_y_suelta_el_candado(sql):

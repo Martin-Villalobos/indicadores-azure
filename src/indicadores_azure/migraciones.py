@@ -8,9 +8,9 @@ correr los SQL a mano.
 
 Cada archivo aplicado queda en ``migracion_aplicada`` con su hash. Se aplica un archivo si no está
 registrado o si su contenido cambió. Los archivos son idempotentes (``CREATE TABLE IF NOT EXISTS``,
-``INSERT IGNORE``, ``CREATE OR REPLACE VIEW``), así que volver a correrlos es seguro; pero un
-``CREATE TABLE IF NOT EXISTS`` no agrega columnas a una tabla que ya existe: un cambio de columnas
-va en un archivo nuevo con su ``ALTER TABLE``.
+``INSERT IGNORE``, ``CREATE OR REPLACE VIEW``, y ``ALTER TABLE`` cuyo error de "ya existe" se
+salta), así que volver a correrlos es seguro. Un ``CREATE TABLE IF NOT EXISTS`` no agrega columnas
+a una tabla que ya existe: un cambio de columnas va en un archivo nuevo con su ``ALTER TABLE``.
 """
 
 from __future__ import annotations
@@ -31,6 +31,20 @@ TABLA = """CREATE TABLE IF NOT EXISTS migracion_aplicada (
     aplicada_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )"""
 CANDADO = "indicadores_azure_migraciones"
+# Errores de un ALTER TABLE que ya estaba hecho: columna, índice o FK que ya existe. Así un archivo
+# con ALTER se puede volver a correr (MySQL no tiene ADD COLUMN IF NOT EXISTS).
+YA_EXISTE = {1060, 1061, 1022, 1826}
+
+
+def _ejecutar(cur, sql: str) -> None:
+    try:
+        cur.execute(sql)
+    except Exception as exc:  # pymysql.err.OperationalError / InternalError, según el código
+        codigo = exc.args[0] if exc.args else None
+        if sql.lstrip().upper().startswith("ALTER TABLE") and codigo in YA_EXISTE:
+            log.info("Ya aplicado, se salta: %s", sql.split("\n", 1)[0])
+            return
+        raise
 
 
 def carpeta(nombre: str = "sql") -> Path:
@@ -76,7 +90,7 @@ def aplicar(conn, directorio: Path | None = None) -> list[str]:
                         archivo.name,
                     )
                 for sql in sentencias(texto):
-                    cur.execute(sql)
+                    _ejecutar(cur, sql)
                 cur.execute(
                     "INSERT INTO migracion_aplicada (archivo, sha256) VALUES (%s, %s) "
                     "ON DUPLICATE KEY UPDATE sha256 = VALUES(sha256)",

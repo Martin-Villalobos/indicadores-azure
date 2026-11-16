@@ -291,9 +291,16 @@ Vigencia: los meses completos que cubren sus fechas.'''
 
 // ───────────────────────────── maestros ─────────────────────────────
 
+Table dim_terminal {
+  terminal varchar(60) [pk, note: 'El Retiro, Gabriela, Jardín Alto, Lo Blanco, Los Sauces']
+  actualizado_por varchar(255)
+  actualizado_at datetime
+  Note: 'Terminales (sql/09_dim_terminal.sql). Editable en la web; renombrar una se propaga a buses y servicios (ON UPDATE CASCADE).'
+}
+
 Table dim_servicio_terminal {
   codigo_usuario varchar(20) [pk]
-  terminal varchar(60) [not null, note: 'Los Sauces, Gabriela...']
+  terminal varchar(60) [not null, ref: > dim_terminal.terminal]
   actualizado_por varchar(255)
   actualizado_at datetime
   Note: 'Terminal de cada servicio (maestro servicios_terminales.csv de indicadores-bi). Editable en la web (Datos maestros).'
@@ -331,7 +338,8 @@ Table dim_bus {
   ppu varchar(12) [pk, note: 'sin guiones, mayúsculas']
   tipo_bus varchar(40)
   plazas smallint [note: 'NULL = sin capacidad: el ICP de esa hora no se puede medir']
-  origen varchar(10) [not null, note: 'CARGA (archivo de flota) | MANUAL (web) | INICIAL (sql/09_dim_bus_inicial.sql)']
+  terminal varchar(60) [ref: > dim_terminal.terminal]
+  origen varchar(10) [not null, note: 'CARGA (archivo de flota) | MANUAL (web) | INICIAL (sql/10_dim_bus_inicial.sql)']
   carga_id bigint [ref: > control_carga.carga_id]
   actualizado_por varchar(255)
   actualizado_at datetime
@@ -345,7 +353,8 @@ Table raw_flota {
   ppu varchar(12) [not null]
   tipo_bus varchar(40)
   plazas smallint
-  Note: 'Archivo de flota (CSV o Excel: ppu, tipo_bus, capacidad). Al completar se copia a dim_bus.'
+  terminal varchar(60)
+  Note: 'Archivo de flota (CSV o Excel: ppu, tipo_bus y opcionales capacidad y terminal; sin capacidad, plazas por tipología A=60, B=90, C=150). Al completar se copia a dim_bus; las terminales nuevas se crean en dim_terminal.'
 }
 
 Table dim_periodo {
