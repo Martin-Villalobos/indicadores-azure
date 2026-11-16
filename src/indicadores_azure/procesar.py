@@ -57,7 +57,12 @@ def vaciar_cola(config: Config) -> None:
 
 def _mover(contenedor, origen: str, destino: str, contenido: bytes, metadatos: dict[str, str]) -> None:
     contenedor.get_blob_client(destino).upload_blob(contenido, overwrite=True, metadata=metadatos)
-    contenedor.delete_blob(origen)
+    try:
+        contenedor.delete_blob(origen)
+    except Exception as exc:  # ResourceNotFoundError: alguien ya lo movió; el destino quedó igual
+        if exc.__class__.__name__ != "ResourceNotFoundError" and not isinstance(exc, KeyError):
+            raise
+        log.warning("%s ya no estaba en entrada/", origen)
 
 
 def _reemplazar(conn, tipo: str, anterior: int, nueva: int, usuario: str) -> str:
@@ -157,10 +162,32 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
     return resultado.estado
 
 
+CANDADO = "indicadores_azure_job"
+ESPERA_CANDADO = 3300  # segundos: algo menos que el timeout de una ejecución del job (3600)
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     logging.getLogger("azure").setLevel(logging.WARNING)  # el SDK registra cada petición HTTP
     config = Config.desde_entorno()
+    # Una ejecución a la vez. Azure puede lanzar otra mientras corre una (una ejecución manual, como
+    # la del despliegue, no cuenta para el máximo de las que lanza la cola): la segunda espera a que
+    # termine la primera y después procesa lo que haya quedado en entrada/. Sin esto, las dos tomaban
+    # el mismo archivo y una se caía al moverlo.
+    with conexion(config) as candado:
+        with candado.cursor() as cur:
+            cur.execute("SELECT GET_LOCK(%s, %s)", (CANDADO, ESPERA_CANDADO))
+            if (cur.fetchone() or [0])[0] != 1:
+                log.warning("Otra ejecución del job sigue corriendo; se deja para la próxima.")
+                return 0
+        try:
+            return _procesar(config)
+        finally:
+            with candado.cursor() as cur:
+                cur.execute("SELECT RELEASE_LOCK(%s)", (CANDADO,))
+
+
+def _procesar(config: Config) -> int:
     # Primero la base al día (sql/*.sql pendientes): al desplegar una imagen nueva, las tablas que
     # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
     contenedor = _contenedor(config)
@@ -178,6 +205,10 @@ def main() -> int:
         subidos = datos_iniciales.subir_pendientes(conn, contenedor)
         if subidos:
             log.info("Carga inicial: %s archivos subidos.", len(subidos))
+        # Recálculos que quedaron encolados sin resolver (p. ej. una ejecución que se cayó).
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM recalculo_pendiente WHERE estado = 'PENDIENTE'")
+            encolados = int((cur.fetchone() or [0])[0])
     vaciar_cola(config)
 
     pendientes = [
@@ -187,7 +218,7 @@ def main() -> int:
     ]
     # Avisos de recálculo que deja la web al editar datos maestros (ver web/api/maestros).
     avisos = [b.name for b in contenedor.list_blobs(name_starts_with="recalculo/entrada/")]
-    if not pendientes and not avisos:
+    if not pendientes and not avisos and not encolados:
         log.info("No hay archivos nuevos.")
         return 0
 
@@ -196,7 +227,15 @@ def main() -> int:
     completadas: list[tuple[str, int]] = []
     with conexion(config) as conn:
         for tipo, blob_nombre, metadatos in pendientes:
-            if procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos, completadas) == "ERROR":
+            try:
+                estado = procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos, completadas)
+            except Exception:
+                # Un archivo que falla fuera de la carga (p. ej. al moverlo) no corta los demás ni
+                # el recálculo de lo que ya se cargó.
+                log.exception("Falló %s", blob_nombre)
+                conn.rollback()
+                estado = "ERROR"
+            if estado == "ERROR":
                 errores += 1
         if pendientes:
             log.info("Terminado: %s archivos, %s con error.", len(pendientes), errores)
@@ -204,7 +243,7 @@ def main() -> int:
         try:
             for tipo, carga_id in completadas:
                 encolar_por_carga(conn, tipo, carga_id)
-            if completadas or avisos:
+            if completadas or avisos or encolados:
                 log.info("Recálculos ICFP: %s", procesar_pendientes(conn))
             for aviso in avisos:
                 contenedor.delete_blob(aviso)

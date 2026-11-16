@@ -82,3 +82,10 @@ def test_carga_registra_vigencia_y_error_no(contenedor, conn):
     contenedor.subir("anexo1/entrada/3_c.xlsx", excel(malo), META)
     procesar_blob(CONFIG, contenedor, conn, "anexo1", "anexo1/entrada/3_c.xlsx", META)
     assert len(conn.vigentes("anexo1")) == 3  # la carga con error no cambia las vigencias
+
+
+def test_mover_tolera_que_otro_ya_lo_haya_movido(contenedor):
+    from indicadores_azure.procesar import _mover
+
+    _mover(contenedor, "anexo1/entrada/no_esta.xlsx", "anexo1/procesados/no_esta.xlsx", b"x", {})
+    assert contenedor.blobs["anexo1/procesados/no_esta.xlsx"][0] == b"x"
