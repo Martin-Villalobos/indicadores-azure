@@ -59,12 +59,15 @@ def cargar_archivo(
             return ResultadoCarga(int(previa[0]), "DUPLICADO", 0, 0)
         if previa and previa[1] == "PROCESANDO":
             raise ErrorDeCarga(f"El archivo ya se está procesando (carga {previa[0]}).")
-        if previa:  # ERROR anterior: se reintenta con el mismo registro
+        if previa:  # ERROR anterior o ELIMINADO: se vuelve a cargar con el mismo registro
             carga_id = int(previa[0])
+            if previa[1] == "ELIMINADO":  # sus filas quedaron como historia: se reemplazan
+                cur.execute(f"DELETE FROM `{tabla}` WHERE carga_id = %s", (carga_id,))
             cur.execute(
                 """UPDATE control_carga SET estado='PROCESANDO', nombre_archivo=%s, blob_nombre=%s,
                    subido_por=%s, inicio_at=%s, fin_at=NULL, filas_leidas=NULL, filas_cargadas=NULL,
-                   mensaje_error=NULL WHERE carga_id=%s""",
+                   mensaje_error=NULL, vigencia_desde=NULL, vigencia_hasta=NULL, modificado_por=NULL,
+                   modificado_at=NULL WHERE carga_id=%s""",
                 (nombre, blob, subido_por, datetime.now(), carga_id),
             )
         else:

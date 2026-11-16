@@ -72,6 +72,10 @@ class CursorFalso:
                 for v in sorted(self.conn.vigencias, key=lambda v: v["fecha_inicio"])
                 if v["tipo"] == tipo and v["vigente"] and v["fecha_inicio"] <= hasta and v["fecha_termino"] >= desde
             ]
+        elif sql.startswith("UPDATE control_carga SET vigencia_desde"):
+            self.conn.control[params[-1]].update(vigencia=(params[0], params[1]))
+        elif sql.startswith("DELETE FROM `"):
+            self.conn.filas = [f for f in self.conn.filas if f[0] != params[0]]
         elif sql.startswith("UPDATE vigencia_archivo SET vigente = 0"):
             self.conn.guardar_vigencias()
             carga, _, *ids = params
