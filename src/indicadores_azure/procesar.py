@@ -22,6 +22,7 @@ from urllib.parse import quote, unquote
 
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
+from .datos_iniciales import subir_pendientes as subir_datos_iniciales
 from .db import conexion
 from .migraciones import aplicar as aplicar_migraciones
 from .vigencias import completar_faltantes, eliminar_carga
@@ -162,13 +163,18 @@ def main() -> int:
     config = Config.desde_entorno()
     # Primero la base al día (sql/*.sql pendientes): al desplegar una imagen nueva, las tablas que
     # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
+    contenedor = _contenedor(config)
     with conexion(config) as conn:
         aplicar_migraciones(conn)
         with conn.cursor() as cur:
             for tipo, cambios in completar_faltantes(cur):
                 log.info("Vigencias de cargas antiguas de %s: %s tramos.", tipo, len(cambios))
         conn.commit()
-    contenedor = _contenedor(config)
+        # Archivos de datos_iniciales/ que esta base todavía no tiene: quedan en entrada/ y se
+        # procesan abajo, en esta misma vuelta.
+        subidos = subir_datos_iniciales(conn, contenedor)
+        if subidos:
+            log.info("Carga inicial: %s archivos subidos.", len(subidos))
     vaciar_cola(config)
 
     pendientes = [
