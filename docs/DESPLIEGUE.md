@@ -18,7 +18,9 @@ Todo se hace desde **Azure Cloud Shell (Bash)** con el repo clonado: `git clone 
 
 No hay que correr los SQL a mano. El job aplica al partir los archivos de `sql/` que falten (o que cambiaron) y los registra en la tabla `migracion_aplicada`. En cada push a `main`, el workflow **job** publica la imagen, actualiza el job y lanza una ejecución para que la base quede al día; si esa ejecución falla, el workflow queda en rojo.
 
-Sin el secreto `AZURE_CREDENTIALS`, el resumen del workflow muestra los dos comandos para correr en Cloud Shell (`az containerapp job update ...` y `az containerapp job start ...`). Sin ellos, las tablas igual se crean con el primer archivo que se suba, pero la pestaña Datos maestros no las ve hasta entonces.
+Para que el workflow pueda entrar a Azure (sin secretos, por OIDC), correr una vez en Cloud Shell `bash infra/identidad_github.sh` y crear en GitHub las tres variables que imprime (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`). No necesita permisos de directorio: usa una identidad administrada del grupo de recursos.
+
+Sin esas variables, el resumen del workflow muestra los dos comandos para correr en Cloud Shell (`az containerapp job update ...` y `az containerapp job start ...`). Sin ellos, las tablas igual se crean con el primer archivo que se suba, pero la pestaña Datos maestros no las ve hasta entonces.
 
 Reglas para los SQL nuevos: un archivo nuevo por cambio, con nombre que siga el orden (`09_...sql`), e idempotente (`CREATE TABLE IF NOT EXISTS`, `INSERT IGNORE`, `CREATE OR REPLACE VIEW`). Un `CREATE TABLE IF NOT EXISTS` no agrega columnas a una tabla existente: eso va como `ALTER TABLE` en un archivo nuevo.
 
