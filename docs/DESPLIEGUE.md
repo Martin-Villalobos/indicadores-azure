@@ -14,15 +14,15 @@ Si algún nombre ya está tomado en Azure, cámbialo con la variable del script 
 
 Todo se hace desde **Azure Cloud Shell (Bash)** con el repo clonado: `git clone https://github.com/Martin-Villalobos/indicadores-azure && cd indicadores-azure`.
 
-## 1. Tablas en MySQL (una vez)
+## 1. Tablas en MySQL (automático)
 
-Desde DBeaver (conexión a Azure) ejecutar los archivos de `sql/` en orden (`01_control_carga.sql`, `02_raw_anexo1.sql`, `03_vigencias.sql`, ...). Todos usan `CREATE TABLE IF NOT EXISTS`, así que se pueden volver a correr cuando se agrega uno nuevo. O desde Cloud Shell:
+No hay que correr los SQL a mano. El job aplica al partir los archivos de `sql/` que falten (o que cambiaron) y los registra en la tabla `migracion_aplicada`. En cada push a `main`, el workflow **job** publica la imagen, actualiza el job y lanza una ejecución para que la base quede al día; si esa ejecución falla, el workflow queda en rojo.
 
-```
-for f in sql/*.sql; do mysql -h mysql-prueba-indicadores.mysql.database.azure.com -u mvillalobos -p --ssl-mode=REQUIRED indicadores_bi < "$f"; done
-```
+Sin el secreto `AZURE_CREDENTIALS`, el resumen del workflow muestra los dos comandos para correr en Cloud Shell (`az containerapp job update ...` y `az containerapp job start ...`). Sin ellos, las tablas igual se crean con el primer archivo que se suba, pero la pestaña Datos maestros no las ve hasta entonces.
 
-Cloud Shell necesita acceso al MySQL: ya está marcado "Permitir acceso desde servicios de Azure"; si no conecta, agregar la IP de Cloud Shell en **Redes**.
+Reglas para los SQL nuevos: un archivo nuevo por cambio, con nombre que siga el orden (`09_...sql`), e idempotente (`CREATE TABLE IF NOT EXISTS`, `INSERT IGNORE`, `CREATE OR REPLACE VIEW`). Un `CREATE TABLE IF NOT EXISTS` no agrega columnas a una tabla existente: eso va como `ALTER TABLE` en un archivo nuevo.
+
+Para aplicarlos a mano (por ejemplo desde un equipo con acceso a la base): `ENTORNO=prod indicadores-azure-migrar`.
 
 ## 2. Almacenamiento, cola, Event Grid y job
 

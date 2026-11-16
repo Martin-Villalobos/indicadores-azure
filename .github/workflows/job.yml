@@ -1,5 +1,6 @@
 # Pruebas en cada push (main y dev) / pull request y, sólo en main (prod), imagen del job al registro de Azure
-# y actualización del Container Apps Job para que use la imagen nueva.
+# y actualización del Container Apps Job para que use la imagen nueva; luego una ejecución del job,
+# que aplica los sql/*.sql pendientes en MySQL (ver src/indicadores_azure/migraciones.py).
 # (La suscripción de prueba no permite "az acr build", así que la imagen se construye aquí.)
 #
 # Configurar una vez en GitHub → Settings → Secrets and variables → Actions:
@@ -67,6 +68,7 @@ jobs:
         run: |
           echo "El job no se actualizó solo (falta el secreto AZURE_CREDENTIALS). Para usar la imagen nueva:" >> "$GITHUB_STEP_SUMMARY"
           echo "az containerapp job update -g rg-prueba-indicadores -n job-cargas --image $IMAGEN" >> "$GITHUB_STEP_SUMMARY"
+          echo "az containerapp job start -g rg-prueba-indicadores -n job-cargas   # aplica los sql/*.sql pendientes" >> "$GITHUB_STEP_SUMMARY"
       - uses: azure/login@v2
         if: env.AZURE_CREDENTIALS != ''
         with:
@@ -77,3 +79,19 @@ jobs:
           az extension add -n containerapp --upgrade -y --only-show-errors
           az containerapp job update -g rg-prueba-indicadores -n job-cargas --image "$IMAGEN" -o none
           echo "Job actualizado a $IMAGEN" >> "$GITHUB_STEP_SUMMARY"
+      # El job aplica los sql/*.sql pendientes al partir (indicadores_azure.migraciones); se lanza
+      # una ejecución ahora para que la base quede al día sin esperar al próximo archivo.
+      - name: Aplicar migraciones de la base
+        if: env.AZURE_CREDENTIALS != ''
+        run: |
+          EJECUCION=$(az containerapp job start -g rg-prueba-indicadores -n job-cargas --query name -o tsv)
+          for i in $(seq 1 40); do
+            ESTADO=$(az containerapp job execution show -g rg-prueba-indicadores -n job-cargas \
+              --job-execution-name "$EJECUCION" --query properties.status -o tsv)
+            case "$ESTADO" in
+              Succeeded) echo "Migraciones aplicadas (ejecución $EJECUCION)" >> "$GITHUB_STEP_SUMMARY"; exit 0 ;;
+              Failed|Stopped|Degraded) echo "::error::La ejecución $EJECUCION terminó en $ESTADO; revisar sus logs en Azure"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::La ejecución $EJECUCION no terminó en 10 minutos"; exit 1

@@ -24,6 +24,7 @@ dev = ["azure-functions>=1.18", "pytest>=8"]
 indicadores-azure-procesar = "indicadores_azure.procesar:main"
 indicadores-azure-semilla = "indicadores_azure.semilla:main"
 indicadores-azure-icfp = "indicadores_azure.recalculo:main"
+indicadores-azure-migrar = "indicadores_azure.migraciones:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

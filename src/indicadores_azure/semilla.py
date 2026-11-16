@@ -11,28 +11,16 @@ from __future__ import annotations
 
 import argparse
 import logging
-import re
 import sys
-from pathlib import Path
 
-from .config import RAIZ_REPO, Config, entorno_activo
+from .config import Config, entorno_activo
 from .db import conexion
+from .migraciones import aplicar, carpeta, sentencias
 
 log = logging.getLogger("indicadores_azure.semilla")
 
 
-def _carpeta(nombre: str) -> Path:
-    for base in (Path.cwd(), RAIZ_REPO):
-        if (base / nombre).is_dir():
-            return base / nombre
-    raise RuntimeError(f"No se encontró la carpeta {nombre}/ (correr desde la raíz del repo).")
-
-
-def sentencias(texto: str) -> list[str]:
-    """Separa un archivo .sql en sentencias (los ``;`` de fin de línea), sin comentarios ``--``."""
-
-    sin_comentarios = "\n".join(l for l in texto.splitlines() if not l.lstrip().startswith("--"))
-    return [s.strip() for s in re.split(r";\s*(?:\n|$)", sin_comentarios) if s.strip()]
+_carpeta = carpeta
 
 
 def _tablas(cur, tipo: str = "BASE TABLE") -> list[str]:
@@ -51,11 +39,8 @@ def sembrar_base(conn, reiniciar: bool = False) -> None:
             cur.execute("SET FOREIGN_KEY_CHECKS = 1")
             log.info("Tablas borradas.")
 
-        for archivo in sorted(_carpeta("sql").glob("*.sql")):
-            for sql in sentencias(archivo.read_text(encoding="utf-8")):
-                cur.execute(sql)
-            log.info("Tablas: %s", archivo.name)
-
+    aplicar(conn)  # tablas: sql/*.sql pendientes (lo mismo que hace el job en Azure)
+    with conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM control_carga")
         if cur.fetchone()[0]:
             log.info("La base ya tiene datos: no se cargan semillas (usa --reiniciar para partir de cero).")

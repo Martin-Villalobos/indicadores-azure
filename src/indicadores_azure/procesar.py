@@ -23,6 +23,7 @@ from urllib.parse import unquote
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
 from .db import conexion
+from .migraciones import aplicar as aplicar_migraciones
 from .lectores import LECTORES
 from .recalculo import encolar_por_carga, procesar_pendientes
 
@@ -130,6 +131,10 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     logging.getLogger("azure").setLevel(logging.WARNING)  # el SDK registra cada petición HTTP
     config = Config.desde_entorno()
+    # Primero la base al día (sql/*.sql pendientes): al desplegar una imagen nueva, las tablas que
+    # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
+    with conexion(config) as conn:
+        aplicar_migraciones(conn)
     contenedor = _contenedor(config)
     vaciar_cola(config)
 
