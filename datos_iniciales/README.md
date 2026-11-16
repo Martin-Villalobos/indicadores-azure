@@ -8,7 +8,10 @@ al pasar a otra instancia. Se dejan en la carpeta de su tipo:
 | `anexo1/`      | Anexo 1 (.xlsx)                 |
 | `anexo3/`      | Anexo 3 (.xlsx)                 |
 | `exclusiones/` | Exclusiones del DTPM (.xlsx)    |
-| `velocidades/` | Velocidades (.xlsx)             |
+
+Las velocidades no van en la imagen del job (pesan ~2 GB y cada ejecución tendría que bajarlas): en
+Azure se suben una vez directo al blob, en `velocidades/entrada/`. En dev sí se cargan desde
+`velocidades/`, porque la carpeta está montada.
 
 Se pueden usar subcarpetas (por ejemplo `anexo1/2026/`). Se hace commit de los archivos y, al
 desplegar, el job los sube y los procesa igual que si vinieran de la web: aparecen en

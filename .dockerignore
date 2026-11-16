@@ -12,3 +12,5 @@ tests/
 dev/
 seeds/
 docker-compose.yml
+# Velocidades iniciales: 2 GB que cada ejecución del job tendría que descargar. Van directo al blob.
+datos_iniciales/velocidades/
