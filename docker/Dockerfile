@@ -15,6 +15,7 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 COPY config ./config
 COPY sql ./sql
+COPY datos_iniciales ./datos_iniciales
 RUN pip install --no-cache-dir . && useradd --create-home job
 USER job
 
