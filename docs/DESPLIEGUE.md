@@ -18,7 +18,7 @@ Todo se hace desde **Azure Cloud Shell (Bash)** con el repo clonado: `git clone 
 
 No hay que correr los SQL a mano. El job aplica al partir los archivos de `sql/` que falten (o que cambiaron) y los registra en la tabla `migracion_aplicada`. En cada push a `main`, el workflow **job** publica la imagen, actualiza el job y lanza una ejecución para que la base quede al día; si esa ejecución falla, el workflow queda en rojo.
 
-Después de las tablas, el job sube y procesa los archivos de `datos_iniciales/<tipo>/` que esa base todavía no tiene (tabla `carga_inicial`). Así una instancia nueva parte con los anexos ya cargados, sin subirlos uno a uno en la web. Ver `datos_iniciales/README.md`.
+Antes de esa ejecución, el workflow copia `datos_iniciales/` al blob (`iniciales/`, sólo lo que falta; usa el secreto `conexion-blob` del job). Después de las tablas, el job procesa los archivos de `iniciales/` que esa base todavía no tiene (tabla `carga_inicial`). Así una instancia nueva parte con los anexos ya cargados, sin subirlos uno a uno en la web. Ver `datos_iniciales/README.md`.
 
 Para que el workflow pueda entrar a Azure (sin secretos, por OIDC), correr una vez en Cloud Shell `bash infra/identidad_github.sh` y crear en GitHub las tres variables que imprime (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`). No necesita permisos de directorio: usa una identidad administrada del grupo de recursos.
 

@@ -17,7 +17,8 @@ class ContenedorFalso:
         self.blobs[nombre] = (contenido, dict(metadata or {}))
 
     def list_blobs(self, name_starts_with="", include=None):
-        return [SimpleNamespace(name=n, metadata=m) for n, (_, m) in sorted(self.blobs.items()) if n.startswith(name_starts_with)]
+        return [SimpleNamespace(name=n, metadata=m, size=len(c)) for n, (c, m) in sorted(self.blobs.items())
+                if n.startswith(name_starts_with)]
 
     def download_blob(self, nombre):
         return SimpleNamespace(readall=lambda: self.blobs[nombre][0])
@@ -30,7 +31,7 @@ class ContenedorFalso:
 
         class _Cliente:
             def upload_blob(self, contenido, overwrite=False, metadata=None):
-                contenedor.subir(nombre, contenido, metadata)
+                contenedor.subir(nombre, contenido if isinstance(contenido, bytes) else contenido.read(), metadata)
 
         return _Cliente()
 

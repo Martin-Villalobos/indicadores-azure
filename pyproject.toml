@@ -25,6 +25,7 @@ indicadores-azure-procesar = "indicadores_azure.procesar:main"
 indicadores-azure-semilla = "indicadores_azure.semilla:main"
 indicadores-azure-icfp = "indicadores_azure.recalculo:main"
 indicadores-azure-migrar = "indicadores_azure.migraciones:main"
+indicadores-azure-publicar-iniciales = "indicadores_azure.datos_iniciales:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
