@@ -24,7 +24,7 @@ from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
 from .db import conexion
 from .migraciones import aplicar as aplicar_migraciones
-from .vigencias import eliminar_carga
+from .vigencias import completar_faltantes, eliminar_carga
 from .lectores import LECTORES
 from .recalculo import encolar_por_carga, procesar_pendientes
 
@@ -164,6 +164,10 @@ def main() -> int:
     # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
     with conexion(config) as conn:
         aplicar_migraciones(conn)
+        with conn.cursor() as cur:
+            for tipo, cambios in completar_faltantes(cur):
+                log.info("Vigencias de cargas antiguas de %s: %s tramos.", tipo, len(cambios))
+        conn.commit()
     contenedor = _contenedor(config)
     vaciar_cola(config)
 
