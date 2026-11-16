@@ -1,8 +1,8 @@
 """Anexo 3 del PO o de un programa especial: parámetros de operación por media hora.
 
 Formato esperado: un libro con una sola hoja de parámetros (las demás, como "Reconocimiento KM",
-se ignoran). Antes de los encabezados vienen filas de cabecera con la etiqueta en la columna A y
-el valor en la primera celda con dato a su derecha:
+se ignoran). Antes de los encabezados vienen filas de cabecera con la etiqueta en la primera celda con dato
+(columna A, o B si el libro viene corrido) y el valor en la siguiente celda con dato:
     UNIDAD DE SERVICIO | AÑO | FECHA INICIO | FECHA TÉRMINO
 La fila de encabezados trae todas las columnas de ``ENCABEZADOS``; luego, una fila por servicio,
 sentido, tipo de día y media hora (MH). Las filas sin operación (salidas 0, "--") se conservan.
@@ -73,8 +73,10 @@ def leer(contenido: bytes) -> Iterator[tuple]:
         for numero, fila in enumerate(hoja.iter_rows(values_only=True), start=1):
             valores = list(fila)
             if numero < fila_encabezados:
-                if valores and clave(valores[0]):
-                    cabecera[clave(valores[0])] = next((v for v in valores[1:] if v not in (None, "")), None)
+                # La etiqueta es la primera celda con dato (columna A, o B si el libro viene corrido).
+                datos = [v for v in valores if v not in (None, "")]
+                if datos and clave(datos[0]):
+                    cabecera[clave(datos[0])] = datos[1] if len(datos) > 1 else None
                 continue
             if numero == fila_encabezados:
                 inicio = fecha(cabecera.get("FECHA INICIO"), "Cabecera FECHA INICIO")

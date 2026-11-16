@@ -47,6 +47,13 @@ def test_anexo3_lee_cabecera_y_codigos_como_texto():
     assert g["velocidad_km_hora"] is None and g["numero_salidas"] == 0
 
 
+def test_anexo3_corrido_una_columna():
+    corrido = [(None,) + tuple(f) for f in ANEXO3]  # libro que parte en la columna B
+    filas = list(anexo3.leer(libro({"Parámetros": corrido})))
+    f = dict(zip(anexo3.COLUMNAS, filas[0]))
+    assert len(filas) == 2 and f["fecha_inicio"] == date(2025, 9, 11) and f["codigo_ts_servicio"] == "1603"
+
+
 def test_anexo3_mh_que_no_es_media_hora():
     malo = ANEXO3[:7] + [ANEXO3[7][:5] + ("05:15",) + ANEXO3[7][6:]]
     with pytest.raises(ErrorDeCarga, match="fila 8, columna MH"):

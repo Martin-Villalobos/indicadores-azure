@@ -22,9 +22,10 @@ from urllib.parse import quote, unquote
 
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
+from . import datos_iniciales
 from .db import conexion
 from .migraciones import aplicar as aplicar_migraciones
-from .vigencias import eliminar_carga
+from .vigencias import completar_faltantes, eliminar_carga
 from .lectores import LECTORES
 from .recalculo import encolar_por_carga, procesar_pendientes
 
@@ -162,9 +163,21 @@ def main() -> int:
     config = Config.desde_entorno()
     # Primero la base al día (sql/*.sql pendientes): al desplegar una imagen nueva, las tablas que
     # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
+    contenedor = _contenedor(config)
+    # En dev la carpeta datos_iniciales/ está montada y se publica aquí; en Azure lo hace el
+    # despliegue y la imagen no la trae (no hace nada).
+    datos_iniciales.publicar(contenedor)
     with conexion(config) as conn:
         aplicar_migraciones(conn)
-    contenedor = _contenedor(config)
+        with conn.cursor() as cur:
+            for tipo, cambios in completar_faltantes(cur):
+                log.info("Vigencias de cargas antiguas de %s: %s tramos.", tipo, len(cambios))
+        conn.commit()
+        # Archivos de datos_iniciales/ que esta base todavía no tiene: quedan en entrada/ y se
+        # procesan abajo, en esta misma vuelta.
+        subidos = datos_iniciales.subir_pendientes(conn, contenedor)
+        if subidos:
+            log.info("Carga inicial: %s archivos subidos.", len(subidos))
     vaciar_cola(config)
 
     pendientes = [

@@ -12,3 +12,5 @@ tests/
 dev/
 seeds/
 docker-compose.yml
+# Datos iniciales (~2 GB): los publica el despliegue en el blob (iniciales/), no van en la imagen.
+datos_iniciales/

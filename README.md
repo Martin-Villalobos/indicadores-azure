@@ -20,6 +20,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 |---|---|
 | `src/indicadores_azure/` | El job: `procesar.py` (entrada), `control.py` (registro en `control_carga`, carga en una transacción), `vigencias.py` (qué carga rige cada fecha), `lectores/` (uno por tipo de archivo), `icfp/` (cálculo del ICFP) y `recalculo.py` (cola de recálculos después de cada carga) |
 | `sql/` | Tablas que necesita el job. Se aplican solas: el job corre los archivos pendientes al partir (`migracion_aplicada`) |
+| `datos_iniciales/` | Anexos y otros archivos que el job carga solo en una base nueva (ver su README) |
 | `docker/` | Imagen del job |
 | `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` lista los reportes y `/api/reporte/<id>` abre uno) |
 | `local/` | Script rclone que envía Reporte 1.117 y Velocidades desde el espejo FTP de la máquina local |
