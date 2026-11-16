@@ -23,7 +23,9 @@ from urllib.parse import unquote
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
 from .db import conexion
+from .migraciones import aplicar as aplicar_migraciones
 from .lectores import LECTORES
+from .recalculo import encolar_por_carga, procesar_pendientes
 
 log = logging.getLogger("indicadores_azure")
 
@@ -56,37 +58,50 @@ def _mover(contenedor, origen: str, destino: str, contenido: bytes, metadatos: d
     contenedor.delete_blob(origen)
 
 
-def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str, metadatos: dict[str, str]) -> str:
-    """Procesa un archivo y devuelve el estado final (COMPLETADO, DUPLICADO o ERROR)."""
+def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str, metadatos: dict[str, str],
+                  completadas: list[tuple[str, int]] | None = None) -> str:
+    """Procesa un archivo y devuelve el estado final (COMPLETADO, DUPLICADO o ERROR).
+
+    Si se pasa ``completadas``, agrega (tipo, carga_id) de una carga COMPLETADO.
+    """
 
     lector = LECTORES[tipo]
     nombre = unquote(metadatos.get("nombre_original") or "") or Path(blob_nombre).name
     subido_por = unquote(metadatos.get("subido_por") or "") or "desconocido"
     archivo = blob_nombre.split("/entrada/", 1)[1]
+    # control_carga.blob_nombre guarda dónde queda el archivo al terminar, no la ruta de entrada
+    destino_ok = f"{tipo}/procesados/{archivo}"
+    destino_error = f"{tipo}/errores/{archivo}"
     contenido = contenedor.download_blob(blob_nombre).readall()
     sha256 = hashlib.sha256(contenido).hexdigest()
 
-    try:
+    def filas():
         if Path(nombre).suffix.lower() not in lector.EXTENSIONES:
             raise ErrorDeCarga(
                 f"Extensión no permitida para {tipo}: se espera {', '.join(sorted(lector.EXTENSIONES))}."
             )
+        yield from lector.leer(contenido)
+
+    try:
         resultado = cargar_archivo(
             conn,
             tipo=tipo,
             nombre=nombre,
-            blob=blob_nombre,
+            blob=destino_ok,
+            blob_error=destino_error,
             sha256=sha256,
             subido_por=subido_por,
             tabla=lector.TABLA,
             columnas=lector.COLUMNAS,
-            filas=lector.leer(contenido),
+            filas=filas(),
             batch_size=config.batch_size,
+            vigencia=getattr(lector, "VIGENCIA", None),
+            vigencia_por_mes=getattr(lector, "VIGENCIA_POR_MES", False),
         )
     except Exception as exc:
         mensaje = str(exc) if isinstance(exc, ErrorDeCarga) else f"Error inesperado: {exc.__class__.__name__}: {exc}"
         log.error("ERROR %s: %s", blob_nombre, mensaje)
-        destino = f"{tipo}/errores/{archivo}"
+        destino = destino_error
         _mover(contenedor, blob_nombre, destino, contenido, {**metadatos, "estado": "ERROR"})
         contenedor.get_blob_client(f"{destino}.error.txt").upload_blob(
             f"Archivo: {nombre}\nTipo: {tipo}\nSubido por: {subido_por}\n\n{mensaje}\n".encode("utf-8"),
@@ -97,7 +112,7 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
     _mover(
         contenedor,
         blob_nombre,
-        f"{tipo}/procesados/{archivo}",
+        destino_ok,
         contenido,
         {
             **metadatos,
@@ -107,12 +122,19 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
         },
     )
     log.info("%s %s: %s filas (carga %s)", resultado.estado, blob_nombre, resultado.filas_cargadas, resultado.carga_id)
+    if completadas is not None and resultado.estado == "COMPLETADO":
+        completadas.append((tipo, resultado.carga_id))
     return resultado.estado
 
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.getLogger("azure").setLevel(logging.WARNING)  # el SDK registra cada petición HTTP
     config = Config.desde_entorno()
+    # Primero la base al día (sql/*.sql pendientes): al desplegar una imagen nueva, las tablas que
+    # trae se crean solas. Si falla, no se procesa nada con un esquema a medias.
+    with conexion(config) as conn:
+        aplicar_migraciones(conn)
     contenedor = _contenedor(config)
     vaciar_cola(config)
 
@@ -121,17 +143,31 @@ def main() -> int:
         for tipo in LECTORES
         for blob in contenedor.list_blobs(name_starts_with=f"{tipo}/entrada/", include=["metadata"])
     ]
-    if not pendientes:
+    # Avisos de recálculo que deja la web al editar datos maestros (ver web/api/maestros).
+    avisos = [b.name for b in contenedor.list_blobs(name_starts_with="recalculo/entrada/")]
+    if not pendientes and not avisos:
         log.info("No hay archivos nuevos.")
         return 0
 
-    log.info("Archivos a procesar: %s", len(pendientes))
+    log.info("Archivos a procesar: %s; avisos de recálculo: %s", len(pendientes), len(avisos))
     errores = 0
+    completadas: list[tuple[str, int]] = []
     with conexion(config) as conn:
         for tipo, blob_nombre, metadatos in pendientes:
-            if procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos) == "ERROR":
+            if procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos, completadas) == "ERROR":
                 errores += 1
-    log.info("Terminado: %s archivos, %s con error.", len(pendientes), errores)
+        if pendientes:
+            log.info("Terminado: %s archivos, %s con error.", len(pendientes), errores)
+        # Después de cargar: maestros y recálculo de indicadores. Un error aquí no deshace las cargas.
+        try:
+            for tipo, carga_id in completadas:
+                encolar_por_carga(conn, tipo, carga_id)
+            if completadas or avisos:
+                log.info("Recálculos ICFP: %s", procesar_pendientes(conn))
+            for aviso in avisos:
+                contenedor.delete_blob(aviso)
+        except Exception:
+            log.exception("Falló el recálculo después de la carga.")
     return 0
 
 

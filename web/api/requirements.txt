@@ -1,2 +1,4 @@
 azure-functions
 azure-storage-blob>=12.19,<13
+pymysql>=1.1,<2
+certifi

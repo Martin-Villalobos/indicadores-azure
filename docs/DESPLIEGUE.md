@@ -14,15 +14,17 @@ Si algún nombre ya está tomado en Azure, cámbialo con la variable del script 
 
 Todo se hace desde **Azure Cloud Shell (Bash)** con el repo clonado: `git clone https://github.com/Martin-Villalobos/indicadores-azure && cd indicadores-azure`.
 
-## 1. Tablas en MySQL (una vez)
+## 1. Tablas en MySQL (automático)
 
-Desde DBeaver (conexión a Azure) ejecutar `sql/01_control_carga.sql` y luego `sql/02_raw_anexo1.sql`. O desde Cloud Shell:
+No hay que correr los SQL a mano. El job aplica al partir los archivos de `sql/` que falten (o que cambiaron) y los registra en la tabla `migracion_aplicada`. En cada push a `main`, el workflow **job** publica la imagen, actualiza el job y lanza una ejecución para que la base quede al día; si esa ejecución falla, el workflow queda en rojo.
 
-```
-for f in sql/*.sql; do mysql -h mysql-prueba-indicadores.mysql.database.azure.com -u mvillalobos -p --ssl-mode=REQUIRED indicadores_bi < "$f"; done
-```
+Para que el workflow pueda entrar a Azure (sin secretos, por OIDC), correr una vez en Cloud Shell `bash infra/identidad_github.sh` y crear en GitHub las tres variables que imprime (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`). No necesita permisos de directorio: usa una identidad administrada del grupo de recursos.
 
-Cloud Shell necesita acceso al MySQL: ya está marcado "Permitir acceso desde servicios de Azure"; si no conecta, agregar la IP de Cloud Shell en **Redes**.
+Sin esas variables, el resumen del workflow muestra los dos comandos para correr en Cloud Shell (`az containerapp job update ...` y `az containerapp job start ...`). Sin ellos, las tablas igual se crean con el primer archivo que se suba, pero la pestaña Datos maestros no las ve hasta entonces.
+
+Reglas para los SQL nuevos: un archivo nuevo por cambio, con nombre que siga el orden (`09_...sql`), e idempotente (`CREATE TABLE IF NOT EXISTS`, `INSERT IGNORE`, `CREATE OR REPLACE VIEW`). Un `CREATE TABLE IF NOT EXISTS` no agrega columnas a una tabla existente: eso va como `ALTER TABLE` en un archivo nuevo.
+
+Para aplicarlos a mano (por ejemplo desde un equipo con acceso a la base): `ENTORNO=prod indicadores-azure-migrar`.
 
 ## 2. Almacenamiento, cola, Event Grid y job
 
@@ -48,6 +50,8 @@ Desde ahí, cada push a `main` corre las pruebas y publica una imagen nueva. Par
 ## 3. Publicar la web
 
 En la Static Web App → **Configuración → Variables de entorno** (Producción): `BLOB_CONNECTION_STRING` = la cadena de la cuenta (`az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv`) y `BLOB_CONTAINER` = `cargas`.
+
+Para la pestaña **Datos maestros** (lee y edita `dim_bus` y `dim_servicio_terminal`) la API también necesita la base: `DB_HOST` = `mysql-prueba-indicadores.mysql.database.azure.com`, `DB_NAME` = `indicadores_bi`, `DB_USER` y `DB_PASSWORD`. La conexión usa TLS con los certificados de `certifi` (o `DB_SSL_CA` si se define). Cada cambio encola un recálculo del ICFP y deja un aviso en `cargas/recalculo/entrada/`, que dispara el job igual que un archivo nuevo.
 
 **Automático (recomendado):** cada push a `main` que toque `web/` publica la web con GitHub Actions (`.github/workflows/web.yml`). Una vez, en GitHub → **Settings → Secrets and variables → Actions → New repository secret**: `AZURE_STATIC_WEB_APPS_API_TOKEN` = el token de implementación. También se puede correr a mano en **Actions → web → Run workflow**.
 
@@ -107,7 +111,7 @@ App → **Administración de roles → Invitar**: proveedor Microsoft Entra ID, 
 
 ## Dashboards
 
-Los enlaces no están en el código: la página los pide a `/api/dashboards`, que sólo responde a usuarios con login. Se configuran en la Static Web App → **Configuración → Variables de entorno** → `DASHBOARDS`, con un JSON en una sola línea:
+Los enlaces no están en el código ni llegan a la página: `/api/dashboards` sólo entrega nombre, descripción y un número, y el iframe abre `/api/reporte/<número>`, que redirige (302) al enlace de Power BI. Las dos rutas sólo responden a usuarios con login. Se configuran en la Static Web App → **Configuración → Variables de entorno** → `DASHBOARDS`, con un JSON en una sola línea:
 
 ```
 [{"nombre":"IP del mes","descripcion":"Índice de puntualidad por expedición.","url":"https://app.powerbi.com/view?r=..."},{"nombre":"IE","descripcion":"...","url":"https://app.powerbi.com/view?r=..."}]
@@ -115,7 +119,7 @@ Los enlaces no están en el código: la página los pide a `/api/dashboards`, qu
 
 Cambiar la variable no requiere volver a publicar la web. `&pageName=ReportSectionXXXX` en la URL abre una página concreta del reporte.
 
-La página recorta la barra inferior de Power BI (compartir, pantalla completa, logo) y desactiva el clic derecho. Esto dificulta copiar el enlace, pero no lo impide: un usuario con login puede verlo con las herramientas del navegador (F12). Si un enlace se filtra, en app.powerbi.com → ⚙ → **Administrar códigos para insertar** se elimina y se genera uno nuevo.
+La página recorta la barra inferior de Power BI (compartir, pantalla completa, logo) y desactiva el clic derecho. Esto dificulta copiar el enlace, pero no lo impide: un usuario con login puede verlo en la pestaña Red de las herramientas del navegador (F12), porque el navegador sigue la redirección. Si un enlace se filtra, en app.powerbi.com → ⚙ → **Administrar códigos para insertar** se elimina y se genera uno nuevo.
 
 ## Dominio propio (pendiente)
 

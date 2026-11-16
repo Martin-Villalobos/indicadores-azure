@@ -1,0 +1,78 @@
+# Entorno dev local: MySQL, Azurite (emulador de Azure Storage), seeder, job y web.
+#   docker compose up --build        → web en http://localhost:8080
+#   docker compose run --rm semilla --reiniciar   → base de nuevo con sólo las semillas
+#   docker compose down -v           → borra todo (base y archivos)
+# Nada de esto se despliega: prod (rama main) sigue en Azure.
+
+x-python: &python
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.dev
+  image: indicadores-azure-dev
+  volumes:
+    - ./:/app
+  environment: &entorno
+    ENTORNO: dev
+    DB_HOST: mysql
+    DB_PORT: "3306"
+    # Igual que en config/entornos.toml [dev], pero apuntando a "azurite" dentro de la red de compose.
+    BLOB_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;"
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: indicadores_bi
+      MYSQL_USER: indicadores
+      MYSQL_PASSWORD: indicadores
+      TZ: America/Santiago
+    ports:
+      - "${MYSQL_PUERTO_LOCAL:-3306}:3306"
+    volumes:
+      - mysql-datos:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uindicadores", "-pindicadores"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --location /datos --skipApiVersionCheck --loose
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+    volumes:
+      - azurite-datos:/datos
+
+  # Crea las tablas (sql/), carga las semillas (seeds/) si la base está vacía y crea el contenedor.
+  semilla:
+    <<: *python
+    command: ["indicadores-azure-semilla"]
+    entrypoint: []
+    depends_on:
+      mysql: { condition: service_healthy }
+      azurite: { condition: service_started }
+
+  # En Azure el job lo dispara la cola; aquí revisa entrada/ cada 5 segundos.
+  job:
+    <<: *python
+    command: ["sh", "-c", "while true; do indicadores-azure-procesar || true; sleep 5; done"]
+    depends_on:
+      semilla: { condition: service_completed_successfully }
+
+  web:
+    <<: *python
+    command: ["python", "dev/servidor_web.py"]
+    environment:
+      <<: *entorno
+      WEB_HOST: 0.0.0.0
+    ports:
+      - "${WEB_PUERTO_LOCAL:-8080}:8080"
+    depends_on:
+      semilla: { condition: service_completed_successfully }
+
+volumes:
+  mysql-datos:
+  azurite-datos:
