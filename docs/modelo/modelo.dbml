@@ -46,6 +46,7 @@ Enum estado_carga {
   PROCESANDO
   COMPLETADO
   ERROR
+  ELIMINADO [note: 'eliminada desde la web: no rige ninguna fecha']
 }
 
 Enum estado_calculo {
