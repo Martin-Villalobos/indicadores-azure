@@ -49,6 +49,8 @@ Desde ahí, cada push a `main` corre las pruebas y publica una imagen nueva. Par
 
 En la Static Web App → **Configuración → Variables de entorno** (Producción): `BLOB_CONNECTION_STRING` = la cadena de la cuenta (`az storage account show-connection-string -g rg-prueba-indicadores -n stindicadoresprueba -o tsv`) y `BLOB_CONTAINER` = `cargas`.
 
+Para la pestaña **Datos maestros** (lee y edita `dim_bus` y `dim_servicio_terminal`) la API también necesita la base: `DB_HOST` = `mysql-prueba-indicadores.mysql.database.azure.com`, `DB_NAME` = `indicadores_bi`, `DB_USER` y `DB_PASSWORD`. La conexión usa TLS con los certificados de `certifi` (o `DB_SSL_CA` si se define). Cada cambio encola un recálculo del ICFP y deja un aviso en `cargas/recalculo/entrada/`, que dispara el job igual que un archivo nuevo.
+
 **Automático (recomendado):** cada push a `main` que toque `web/` publica la web con GitHub Actions (`.github/workflows/web.yml`). Una vez, en GitHub → **Settings → Secrets and variables → Actions → New repository secret**: `AZURE_STATIC_WEB_APPS_API_TOKEN` = el token de implementación. También se puede correr a mano en **Actions → web → Run workflow**.
 
 **A mano**, desde la raíz del repo en Cloud Shell: `bash web/publicar.sh` (pide el token sin mostrarlo y empaqueta las dependencias de la API).

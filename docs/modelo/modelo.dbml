@@ -122,74 +122,68 @@ a otra carga ya subida: se registra con origen = MANUAL y encola el recálculo i
 }
 
 Table indicador {
-  indicador_id smallint [pk, increment]
-  codigo varchar(20) [not null, unique, note: 'ICFP, ITE, IE, IP, IPK, ICB, IKB...']
+  codigo varchar(20) [pk, note: 'ICFP, ITE, IE, IP...']
   nombre varchar(200) [not null]
-  origen varchar(20) [not null, note: 'CONTRATO | INTERNO']
-  referencia varchar(200) [note: 'cláusula, p. ej. Contrato 5.3.1.6']
-  granularidad_base varchar(40) [note: 'p. ej. SSPD = servicio-sentido-periodo-día']
-  activo boolean [not null, default: true]
   Note: 'Catálogo de indicadores. Agregar uno nuevo es agregar una fila aquí.'
 }
 
 Table indicador_fuente {
-  indicador_id smallint [ref: > indicador.indicador_id]
+  indicador varchar(20) [ref: > indicador.codigo]
   tipo_archivo varchar(40) [ref: > tipo_archivo.codigo]
-  desfase_dias smallint [not null, default: 0, note: 'p. ej. 1 si el día d usa d-1 y d+1 (trasvasije)']
+  desfase_dias smallint [not null, default: 0, note: '1 si un cambio en d afecta d-1 y d+1 (trasvasije)']
 
   indexes {
-    (indicador_id, tipo_archivo) [pk]
+    (indicador, tipo_archivo) [pk]
   }
-  Note: 'De qué tipos de archivo depende cada indicador (ICFP: anexo3, velocidades, exclusiones).'
+  Note: 'De qué tipos de archivo depende cada indicador (ICFP: anexo3, velocidades, exclusiones, flota).'
 }
 
 Table recalculo_pendiente {
   recalculo_id bigint [pk, increment]
-  indicador_id smallint [not null, ref: > indicador.indicador_id]
+  indicador varchar(20) [not null, ref: > indicador.codigo]
   fecha_desde date [not null]
   fecha_hasta date [not null]
-  motivo_carga_id bigint [ref: > control_carga.carga_id, note: 'archivo nuevo o reemplazado que lo gatilló; NULL = manual']
-  estado estado_recalculo [not null]
+  motivo_carga_id bigint [ref: > control_carga.carga_id, note: 'archivo que lo gatilló; NULL = cambio en datos maestros']
+  estado varchar(12) [not null, note: 'PENDIENTE | HECHO | ERROR']
   calculo_id bigint [ref: > calculo.calculo_id, note: 'cálculo que lo resolvió']
   creado_at datetime [not null]
   resuelto_at datetime
-  Note: 'Cola de recálculos por rango de fechas. Se llena al registrar una vigencia o a mano.'
+  Note: 'Cola de recálculos. La llena el job al completar una carga y la web al editar datos maestros; el job junta los rangos que se tocan en un solo cálculo.'
 }
 
 Table calculo {
   calculo_id bigint [pk, increment]
-  indicador_id smallint [not null, ref: > indicador.indicador_id]
+  indicador varchar(20) [not null, ref: > indicador.codigo]
   fecha_desde date [not null]
   fecha_hasta date [not null]
-  version_algoritmo varchar(50) [not null]
-  parametros json [not null, note: 'foto de los parámetros usados']
-  estado estado_calculo [not null]
+  version_algoritmo varchar(50) [not null, note: 'ICFP_HORA_V1']
+  estado varchar(12) [not null, note: 'PROCESANDO | OK | ERROR']
   inicio_at datetime [not null]
   fin_at datetime
-  mensaje_error text
+  fechas_calculadas int
+  mensaje_error text [note: 'también las fechas omitidas (sin Anexo 3 vigente para su tipo de día)']
 
   indexes {
-    (indicador_id, fecha_desde) [name: 'ix_calculo_indicador']
+    (indicador, estado, fecha_desde) [name: 'ix_calculo_indicador']
   }
   Note: 'Cada corrida de un indicador. Nunca se sobrescribe: un recálculo es un calculo nuevo.'
 }
 
 Table calculo_entrada {
   calculo_id bigint [ref: > calculo.calculo_id]
-  carga_id bigint [ref: > control_carga.carga_id]
+  fecha date [not null]
   tipo_archivo varchar(40) [not null, ref: > tipo_archivo.codigo]
-  fecha_inicio date [not null, note: 'tramo de fechas para el que se usó']
-  fecha_termino date [not null]
+  carga_id bigint [not null, ref: > control_carga.carga_id]
 
   indexes {
-    (calculo_id, carga_id, fecha_inicio) [pk]
+    (calculo_id, fecha, tipo_archivo) [pk]
   }
-  Note: 'Qué carga se usó para qué fechas en cada cálculo. Si hoy vigencia_archivo dice otra cosa para esas fechas, el cálculo quedó obsoleto.'
+  Note: 'Qué carga se usó para cada fecha del cálculo. Si hoy vigencia_archivo dice otra cosa, ese cálculo quedó obsoleto.'
 }
 
 Table parametro {
   parametro_id int [pk, increment]
-  indicador_id smallint [ref: > indicador.indicador_id, note: 'NULL = parámetro común']
+  indicador varchar(20) [ref: > indicador.codigo, note: 'NULL = parámetro común']
   nombre varchar(40) [not null, note: 'FT_OFFLINE, PLAZAS_A, X_IE1, A_ITE...']
   vigente_desde date [not null]
   vigente_hasta date
@@ -199,7 +193,7 @@ Table parametro {
   indexes {
     (nombre, vigente_desde) [unique]
   }
-  Note: 'Generaliza dim_parametro_ite: constantes con vigencia (pueden cambiar por oficio).'
+  Note: 'PENDIENTE (aún no implementada). Generaliza dim_parametro_ite: constantes con vigencia (pueden cambiar por oficio).'
 }
 
 // ───────────────────────────── raw ─────────────────────────────
@@ -297,15 +291,17 @@ Vigencia: los meses completos que cubren sus fechas.'''
 
 // ───────────────────────────── maestros ─────────────────────────────
 
-Table dim_terminal {
-  terminal_id smallint [pk, increment]
-  nombre varchar(60) [not null, unique, note: 'Los Sauces, Gabriela...']
-  Note: 'Igual que dim_terminal de indicadores_bi (maestro servicios_terminales.csv).'
+Table dim_servicio_terminal {
+  codigo_usuario varchar(20) [pk]
+  terminal varchar(60) [not null, note: 'Los Sauces, Gabriela...']
+  actualizado_por varchar(255)
+  actualizado_at datetime
+  Note: 'Terminal de cada servicio (maestro servicios_terminales.csv de indicadores-bi). Editable en la web (Datos maestros).'
 }
 
 Table dim_servicio_sentido {
   servicio_sentido_id int [pk, increment]
-  terminal_id smallint [not null, ref: > dim_terminal.terminal_id, note: 'terminal del servicio (por código usuario)']
+  terminal varchar(60) [note: 'de dim_servicio_terminal por código usuario']
   codigo_ts varchar(20) [not null, note: 'normalizado: sin espacios, mayúsculas']
   codigo_usuario varchar(20)
   sentido char(1) [not null, note: 'I / R']
@@ -313,7 +309,7 @@ Table dim_servicio_sentido {
   indexes {
     (codigo_ts, sentido) [unique]
   }
-  Note: 's del contrato. Normaliza el código una sola vez para que anexo y velocidades crucen.'
+  Note: 'PENDIENTE (aún no implementada). s del contrato. Normaliza el código una sola vez para que anexo y velocidades crucen.'
 }
 
 Table dim_fecha {
@@ -322,22 +318,34 @@ Table dim_fecha {
   dia_semana tinyint [not null]
   tipo_dia_calendario varchar(10) [not null, note: 'LABORAL / SABADO / DOMINGO (feriado = DOMINGO)']
   es_feriado boolean [not null, default: false]
-  Note: 'Calendario. El tipo de día operativo sale de las velocidades del día.'
+  Note: 'PENDIENTE (aún no implementada). Calendario. El tipo de día operativo sale de las velocidades del día.'
 }
 
 Table dim_tipologia_bus {
   tipologia varchar(5) [pk, note: 'A1, A2, B1, B2, C1, C2']
   plazas smallint [not null, note: 'Contrato Tabla 5: A=60, B=90, C=150 (debe calzar con bi.tipo_bus.capacidad)']
+  Note: 'PENDIENTE (aún no implementada).'
 }
 
 Table dim_bus {
-  bus_id int [pk, increment]
-  ppu varchar(10) [not null, unique]
-  tipologia varchar(5) [not null, ref: > dim_tipologia_bus.tipologia]
-  terminal varchar(60)
-  primera_fecha date [note: 'primera vez vista en velocidades']
-  ultima_fecha date [note: 'última vez vista en velocidades']
-  Note: 'Flota. Los buses no cambian de tipología; solo dejan de aparecer.'
+  ppu varchar(12) [pk, note: 'sin guiones, mayúsculas']
+  tipo_bus varchar(40)
+  plazas smallint [note: 'NULL = sin capacidad: el ICP de esa hora no se puede medir']
+  origen varchar(10) [not null, note: 'CARGA (archivo de flota) | MANUAL (web)']
+  carga_id bigint [ref: > control_carga.carga_id]
+  actualizado_por varchar(255)
+  actualizado_at datetime
+  Note: 'Flota = bi.buses + bi.tipo_bus. La llena cada carga de flota y se corrige en la web. El ICP nunca usa la capacidad de velocidades.'
+}
+
+Table raw_flota {
+  id bigint [pk, increment]
+  carga_id bigint [not null, ref: > control_carga.carga_id]
+  numero_fila int [not null]
+  ppu varchar(12) [not null]
+  tipo_bus varchar(40)
+  plazas smallint
+  Note: 'Archivo de flota (CSV o Excel: ppu, tipo_bus, capacidad). Al completar se copia a dim_bus.'
 }
 
 Table dim_periodo {
@@ -351,7 +359,7 @@ Table dim_periodo {
   indexes {
     (esquema, codigo) [unique]
   }
-  Note: 'p del contrato: la media hora (Anexo 3 C.2), agrupable por oficio. El cálculo elige el esquema y lo guarda en calculo.parametros.'
+  Note: 'PENDIENTE (aún no implementada). p del contrato: la media hora (Anexo 3 C.2), agrupable por oficio. El cálculo elige el esquema y lo guarda en calculo.parametros.'
 }
 
 // ───────────────────────────── programa ─────────────────────────────
@@ -369,7 +377,7 @@ Table programa_periodo {
   indexes {
     (carga_id, servicio_sentido_id, tipo_dia, periodo_id) [unique]
   }
-  Note: 'Exigencia por servicio-sentido-periodo y tipo de día. Con esquema MH es 1:1 con las filas del Anexo 3.'
+  Note: 'PENDIENTE (aún no implementada). Exigencia por servicio-sentido-periodo y tipo de día. Con esquema MH es 1:1 con las filas del Anexo 3.'
 }
 
 Table programa_periodo_tipologia {
@@ -380,7 +388,7 @@ Table programa_periodo_tipologia {
   indexes {
     (programa_periodo_id, tipologia) [pk]
   }
-  Note: 'Opcional: desglose por tipo de bus (lo pide km válidos por tipo de bus / PKS).'
+  Note: 'PENDIENTE (aún no implementada). Opcional: desglose por tipo de bus (lo pide km válidos por tipo de bus / PKS).'
 }
 
 // ───────────────────────────── operacion ─────────────────────────────
@@ -390,7 +398,7 @@ Table expedicion {
   raw_velocidades_id bigint [not null, ref: > raw_velocidades.id]
   fecha date [not null, ref: > dim_fecha.fecha]
   servicio_sentido_id int [not null, ref: > dim_servicio_sentido.servicio_sentido_id]
-  bus_id int [ref: > dim_bus.bus_id, note: 'NULL si la patente no está en la flota']
+  ppu varchar(12) [ref: > dim_bus.ppu, note: 'NULL si la patente no está en la flota']
   fh_salida datetime [not null]
   fh_llegada datetime
   periodo_id smallint [not null, ref: > dim_periodo.periodo_id, note: 'periodo de despacho']
@@ -401,7 +409,7 @@ Table expedicion {
   indexes {
     (fecha, servicio_sentido_id, periodo_id) [name: 'ix_expedicion_sspd']
   }
-  Note: 'Expedición realizada, normalizada y ya cruzada con flota. La comparten ICFP, ITE, IPK, Telemetría km...'
+  Note: 'PENDIENTE (aún no implementada). Expedición realizada, normalizada y ya cruzada con flota. La comparten ICFP, ITE, IPK, Telemetría km...'
 }
 
 Table evento_exogeno {
@@ -412,76 +420,104 @@ Table evento_exogeno {
   categoria varchar(60) [note: 'p. ej. Tráfico Recargado (define el aporte al FEO)']
   aceptado boolean [not null]
   observacion text
-  Note: 'Eventos exógenos aceptados por DTPM (Manual de Eventos Exógenos).'
+  Note: 'PENDIENTE (aún no implementada). Eventos exógenos aceptados por DTPM (Manual de Eventos Exógenos).'
 }
 
 Table evento_exclusion {
   evento_id bigint [ref: > evento_exogeno.evento_id]
   servicio_sentido_id int [ref: > dim_servicio_sentido.servicio_sentido_id, note: 'NULL = todos']
   periodo_id smallint [ref: > dim_periodo.periodo_id]
-  Note: 'SSPD excluidos por evento complejo, mayor o tecnológico mayor.'
+  Note: 'PENDIENTE (aún no implementada). SSPD excluidos por evento complejo, mayor o tecnológico mayor.'
 }
 
 Table factor_dia {
   fecha date [pk, ref: > dim_fecha.fecha]
   feo decimal(8,5) [not null, note: 'FEO d, >= 1']
 
-  Note: 'Factor por Eventos Operacionales del día. FT_offline vive en parametro.'
+  Note: 'PENDIENTE (aún no implementada). Factor por Eventos Operacionales del día. FT_offline vive en parametro.'
 }
 
 // ───────────────────────────── icfp ─────────────────────────────
 
 Table icfp_sspd {
   calculo_id bigint [ref: > calculo.calculo_id]
-  fecha date [ref: > dim_fecha.fecha]
-  servicio_sentido_id int [ref: > dim_servicio_sentido.servicio_sentido_id]
-  periodo_id smallint [ref: > dim_periodo.periodo_id]
-  mes date [not null, note: 'desnormalizado para agrupar sin joins']
+  fecha date
+  codigo_ts varchar(20) [note: 'normalizado: sin espacios, mayúsculas']
+  sentido char(1) [note: 'I / R']
+  periodo tinyint [note: 'hora de despacho 0-23 (como indicadores-bi y el DTPM)']
+  mes date [not null]
   tipo_dia varchar(10) [not null, note: 'el de las velocidades del día']
-  terminal_id smallint [not null, ref: > dim_terminal.terminal_id]
-  programa_periodo_id bigint [ref: > programa_periodo.programa_periodo_id]
-  longitud_km decimal(10,3) [note: 'L s,p,d']
-  ep int [not null, note: 'expediciones programadas (exigidas)']
-  ev int [not null, note: 'expediciones válidas DESPUÉS del trasvasije (5.3.1.6.6)']
-  pl_prog int [not null, note: 'plazas programadas']
-  pl_val int [not null, note: 'plazas válidas DESPUÉS del trasvasije']
-  icf decimal(8,6) [note: 'min(1, ev/ep)']
-  icp decimal(8,6) [note: 'min(1, pl_val/pl_prog)']
+  codigo_usuario varchar(20)
+  terminal varchar(60) [note: 'de dim_servicio_terminal']
+  ep int [note: 'expediciones programadas (Σ de las dos MH)']
+  ev int [not null, note: 'válidas DESPUÉS del trasvasije']
+  pl_prog int
+  pl_val int [note: 'NULL si alguna expedición no tiene plazas en dim_bus']
+  icf decimal(10,6)
+  icp decimal(10,6)
   feo decimal(8,5) [default: 1]
   ft decimal(8,5) [default: 1]
-  km_programados decimal(12,3) [not null, note: 'kmp = L · ep']
-  km_validos decimal(12,3) [not null, note: 'kmv = min(1, icf·FEO·FT, icp·FEO·FT) · kmp']
-  ev_inicial int [not null, note: 'auditoría: válidas antes del trasvasije']
-  pl_val_inicial int [not null, note: 'auditoría: plazas antes del trasvasije']
-  km_validos_inicial decimal(12,3) [note: 'auditoría: kmv sin trasvasije, para medir su efecto']
-  excluido boolean [not null, default: false, note: 'sin_exigencia = 1']
-  evento_id bigint [ref: > evento_exogeno.evento_id, note: 'evento que causó la exclusión']
+  km_programados decimal(12,3) [not null, note: 'Σ distancia base · salidas de cada MH']
+  km_validos decimal(12,3) [note: 'min(1, icf·FEO·FT, icp·FEO·FT) · kmp; NULL si SIN_CAPACIDAD']
+  ev_inicial int [not null]
+  pl_val_inicial int
+  icf_inicial decimal(10,6)
+  icp_inicial decimal(10,6)
+  km_validos_inicial decimal(12,3)
+  expediciones_recibidas int [not null]
+  expediciones_cedidas int [not null]
+  excluido boolean [not null, default: false, note: 'hoja ICFP-IE del DTPM']
   estado varchar(20) [not null, note: 'OK | SIN_EXIGENCIA | SIN_PROGRAMA | SIN_CAPACIDAD | EXCLUIDO']
 
   indexes {
-    (calculo_id, fecha, servicio_sentido_id, periodo_id) [pk]
-    (calculo_id, mes, terminal_id) [name: 'ix_icfp_mes_terminal']
+    (calculo_id, fecha, codigo_ts, sentido, periodo) [pk]
+    (fecha, calculo_id) [name: 'ix_icfp_fecha']
+    (calculo_id, mes, terminal) [name: 'ix_icfp_mes']
   }
-  Note: '''Grano: servicio-sentido-periodo-día (5.3.1.6), equivale a bi.icfp_data. Filas con ep > 0.
-Todo lo principal (ev, pl_val, icf, icp, km_validos) es DESPUÉS del trasvasije, como pide el contrato;
-las columnas *_inicial solo sirven para auditar el efecto de la corrección (detalle en icfp_trasvasije).
-Km día (por fecha, excluido = 0): Σ km_programados y Σ km_validos
-ICFP (cualquier agrupación) = Σ km_validos / Σ km_programados, ambos con excluido = 0
-Km con derecho a pago (mes) = Σ km_programados (incluidas excluidas) · ICFP del mes (5.3.1.5, parte PO)'''
+  Note: '''Grano: servicio-sentido-hora-día (5.3.1.6), equivale a bi.icfp_data.
+ev, pl_val, icf, icp y km_validos son DESPUÉS del trasvasije; *_inicial es la foto antes de corregir.
+ICFP = Σ km_validos / Σ km_programados, con excluido = 0 y km_validos no nulo.
+Km con derecho a pago (mes) = Σ km_programados (incluidas excluidas) · ICFP del mes.'''
+}
+
+Table icfp_expedicion {
+  calculo_id bigint [ref: > calculo.calculo_id]
+  raw_velocidades_id bigint [ref: > raw_velocidades.id]
+  fecha date [not null]
+  codigo_ts varchar(20) [not null]
+  sentido char(1) [not null]
+  tipo_dia varchar(10) [not null]
+  periodo tinyint [not null]
+  fh_salida datetime [not null]
+  patente varchar(12)
+  tipo_bus varchar(40)
+  plazas smallint
+  estado_plazas varchar(15) [not null, note: 'OK | SIN_BUS | SIN_CAPACIDAD']
+  fecha_asignada date [not null]
+  periodo_asignado tinyint [not null, note: 'distinto de periodo si hubo trasvasije']
+
+  indexes {
+    (calculo_id, raw_velocidades_id) [pk]
+  }
+  Note: 'Expediciones válidas (estado OK en velocidades) usadas por el cálculo.'
 }
 
 Table icfp_trasvasije {
   calculo_id bigint [ref: > calculo.calculo_id]
-  expedicion_id bigint [ref: > expedicion.expedicion_id]
-  periodo_origen_id smallint [not null, ref: > dim_periodo.periodo_id]
-  periodo_destino_id smallint [not null, ref: > dim_periodo.periodo_id]
+  raw_velocidades_id bigint [ref: > raw_velocidades.id]
+  codigo_ts varchar(20) [not null]
+  sentido char(1) [not null]
+  fecha_origen date [not null]
+  periodo_origen tinyint [not null]
   fecha_destino date [not null, note: 'puede ser d-1 o d+1']
-  regla varchar(10) [not null, note: 'ANTERIOR | POSTERIOR']
+  periodo_destino tinyint [not null]
+  regla varchar(15) [not null, note: 'PRIMERA_5_MIN (a la hora anterior) | ULTIMA_5_MIN (a la siguiente)']
+  plazas smallint [not null]
 
   indexes {
-    (calculo_id, expedicion_id) [pk]
+    (calculo_id, raw_velocidades_id) [pk]
   }
-  Note: 'Corrección en extremos de periodos (5.3.1.6.6).'
+  Note: 'Corrección en extremos de periodos (5.3.1.6.6), igual que indicadores-bi.'
 }
 
 // ───────────────────────────── resultado ─────────────────────────────
@@ -501,13 +537,13 @@ Table resultado_indicador {
   indexes {
     (calculo_id, nivel, mes) [name: 'ix_resultado_nivel']
   }
-  Note: 'Resultados agregados de cualquier indicador. Superset lee de aquí (vía vistas del último cálculo).'
+  Note: 'PENDIENTE (aún no implementada). Resultados agregados de cualquier indicador. Superset lee de aquí (vía vistas del último cálculo).'
 }
 
 // ───────────────────────────── vistas para Superset ─────────────────────────────
 
 Table v_calculo_vigente {
-  indicador_id smallint
+  indicador varchar(20)
   fecha date
   calculo_id bigint [note: 'último calculo OK (PROVISORIO/DEFINITIVO) que cubre esa fecha']
   Note: 'VISTA: resuelve por fecha, no por mes, para que recalcular un rango no obligue a recalcular todo el mes.'
@@ -563,6 +599,7 @@ TableGroup control {
 }
 
 TableGroup raw {
+  raw_flota
   raw_anexo1
   raw_anexo3
   raw_velocidades
@@ -570,7 +607,7 @@ TableGroup raw {
 }
 
 TableGroup maestros {
-  dim_terminal
+  dim_servicio_terminal
   dim_servicio_sentido
   dim_fecha
   dim_tipologia_bus
@@ -591,6 +628,7 @@ TableGroup operacion {
 }
 
 TableGroup icfp {
+  icfp_expedicion
   icfp_sspd
   icfp_trasvasije
 }

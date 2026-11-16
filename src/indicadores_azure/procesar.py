@@ -24,6 +24,7 @@ from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
 from .db import conexion
 from .lectores import LECTORES
+from .recalculo import encolar_por_carga, procesar_pendientes
 
 log = logging.getLogger("indicadores_azure")
 
@@ -56,8 +57,12 @@ def _mover(contenedor, origen: str, destino: str, contenido: bytes, metadatos: d
     contenedor.delete_blob(origen)
 
 
-def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str, metadatos: dict[str, str]) -> str:
-    """Procesa un archivo y devuelve el estado final (COMPLETADO, DUPLICADO o ERROR)."""
+def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str, metadatos: dict[str, str],
+                  completadas: list[tuple[str, int]] | None = None) -> str:
+    """Procesa un archivo y devuelve el estado final (COMPLETADO, DUPLICADO o ERROR).
+
+    Si se pasa ``completadas``, agrega (tipo, carga_id) de una carga COMPLETADO.
+    """
 
     lector = LECTORES[tipo]
     nombre = unquote(metadatos.get("nombre_original") or "") or Path(blob_nombre).name
@@ -116,6 +121,8 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
         },
     )
     log.info("%s %s: %s filas (carga %s)", resultado.estado, blob_nombre, resultado.filas_cargadas, resultado.carga_id)
+    if completadas is not None and resultado.estado == "COMPLETADO":
+        completadas.append((tipo, resultado.carga_id))
     return resultado.estado
 
 
@@ -131,17 +138,31 @@ def main() -> int:
         for tipo in LECTORES
         for blob in contenedor.list_blobs(name_starts_with=f"{tipo}/entrada/", include=["metadata"])
     ]
-    if not pendientes:
+    # Avisos de recálculo que deja la web al editar datos maestros (ver web/api/maestros).
+    avisos = [b.name for b in contenedor.list_blobs(name_starts_with="recalculo/entrada/")]
+    if not pendientes and not avisos:
         log.info("No hay archivos nuevos.")
         return 0
 
-    log.info("Archivos a procesar: %s", len(pendientes))
+    log.info("Archivos a procesar: %s; avisos de recálculo: %s", len(pendientes), len(avisos))
     errores = 0
+    completadas: list[tuple[str, int]] = []
     with conexion(config) as conn:
         for tipo, blob_nombre, metadatos in pendientes:
-            if procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos) == "ERROR":
+            if procesar_blob(config, contenedor, conn, tipo, blob_nombre, metadatos, completadas) == "ERROR":
                 errores += 1
-    log.info("Terminado: %s archivos, %s con error.", len(pendientes), errores)
+        if pendientes:
+            log.info("Terminado: %s archivos, %s con error.", len(pendientes), errores)
+        # Después de cargar: maestros y recálculo de indicadores. Un error aquí no deshace las cargas.
+        try:
+            for tipo, carga_id in completadas:
+                encolar_por_carga(conn, tipo, carga_id)
+            if completadas or avisos:
+                log.info("Recálculos ICFP: %s", procesar_pendientes(conn))
+            for aviso in avisos:
+                contenedor.delete_blob(aviso)
+        except Exception:
+            log.exception("Falló el recálculo después de la carga.")
     return 0
 
 
