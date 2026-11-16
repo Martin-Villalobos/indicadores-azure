@@ -97,7 +97,7 @@ def procesar_pendientes(conn) -> int:
         try:
             calculo_id = calcular(conn, desde, hasta)
             estado = "HECHO"
-            calculos += calculo_id is not None
+            calculos += 1
         except Exception:
             log.exception("Falló el recálculo del ICFP %s..%s", desde, hasta)
             calculo_id, estado = None, "ERROR"
@@ -131,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Cálculos hechos: {procesar_pendientes(conn)}")
         else:
             calculo_id = calcular(conn, args.desde, args.hasta or args.desde)
-            print(f"Cálculo {calculo_id}" if calculo_id else "No hay velocidades en ese rango.")
+            print(f"Cálculo {calculo_id}")
     return 0
 
 

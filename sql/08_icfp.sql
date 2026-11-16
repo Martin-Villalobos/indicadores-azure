@@ -196,10 +196,13 @@ CREATE TABLE IF NOT EXISTS icfp_trasvasije (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Último cálculo OK de cada fecha: recalcular unos días no obliga a recalcular el mes.
+-- Para cada fecha manda el último cálculo OK cuyo rango la cubre, aunque ese cálculo no tenga filas
+-- de la fecha (se eliminó su archivo de velocidades o su Anexo 3): así no quedan resultados viejos.
 CREATE OR REPLACE VIEW v_calculo_vigente AS
-SELECT s.fecha, MAX(s.calculo_id) AS calculo_id
-FROM icfp_sspd s JOIN calculo c ON c.calculo_id = s.calculo_id AND c.estado = 'OK'
-GROUP BY s.fecha;
+SELECT f.fecha, MAX(c.calculo_id) AS calculo_id
+FROM (SELECT DISTINCT fecha FROM icfp_sspd) f
+JOIN calculo c ON c.indicador = 'ICFP' AND c.estado = 'OK' AND f.fecha BETWEEN c.fecha_desde AND c.fecha_hasta
+GROUP BY f.fecha;
 
 -- ICFP vigente por servicio-sentido-periodo-día, para el dashboard.
 CREATE OR REPLACE VIEW v_icfp_dashboard AS

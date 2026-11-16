@@ -81,15 +81,15 @@ def _main(req: func.HttpRequest) -> func.HttpResponse:
     if len(contenido) > TAMANO_MAXIMO:
         return _respuesta({"estado": "ERROR", "mensaje": "El archivo supera los 50 MB"}, 413)
 
+    metadata = {"subido_por": _ascii(_usuario(req)), "nombre_original": _ascii(original or nombre)}
+    reemplaza = req.params.get("reemplaza")  # "Reemplazar" en Archivos cargados: carga_id del anterior
+    if reemplaza:
+        if not reemplaza.isdigit():
+            return _respuesta({"estado": "ERROR", "mensaje": "reemplaza debe ser un número de carga"}, 400)
+        metadata["reemplaza"] = reemplaza
+
     blob = f"{tipo}/entrada/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{nombre}"
-    _contenedor().get_blob_client(blob).upload_blob(
-        contenido,
-        overwrite=True,
-        metadata={
-            "subido_por": _ascii(_usuario(req)),
-            "nombre_original": _ascii(original or nombre),
-        },
-    )
+    _contenedor().get_blob_client(blob).upload_blob(contenido, overwrite=True, metadata=metadata)
     return _respuesta({"estado": "RECIBIDO", "archivo": original or nombre, "blob": blob}, 202)
 
 

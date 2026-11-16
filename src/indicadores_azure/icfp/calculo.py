@@ -57,18 +57,18 @@ def _insertar(cur, tabla: str, filas: list[dict], lote: int = 5000) -> None:
         cur.executemany(sql, valores[i:i + lote])
 
 
-def calcular(conn, desde: date, hasta: date) -> int | None:
-    """Calcula y guarda el ICFP de [desde, hasta]. Devuelve el calculo_id, o None si no hay
-    velocidades en el rango."""
+def calcular(conn, desde: date, hasta: date) -> int:
+    """Calcula y guarda el ICFP de [desde, hasta] y devuelve el calculo_id.
+
+    El cálculo queda registrado para todo el rango pedido aunque algunas fechas (o todas) no se
+    puedan calcular, por ejemplo porque se eliminó su archivo de velocidades o su Anexo 3: así
+    v_calculo_vigente deja de mostrar resultados viejos de esas fechas.
+    """
 
     if hasta < desde:
         raise ValueError("Rango de fechas invertido.")
     with conn.cursor() as cur:
         dias_velocidades = _vigencias(cur, "velocidades", desde - UN_DIA, hasta + UN_DIA)
-    if not any(desde <= d <= hasta for d in dias_velocidades):
-        return None
-    desde = max(desde, min(d for d in dias_velocidades if d >= desde))
-    hasta = min(hasta, max(d for d in dias_velocidades if d <= hasta))
 
     with conn.cursor() as cur:
         cur.execute(
@@ -81,14 +81,18 @@ def calcular(conn, desde: date, hasta: date) -> int | None:
 
     try:
         with conn.cursor() as cur:
-            omitidas, filas, entradas, expediciones, trasvasijes = _calcular(cur, calculo_id, desde, hasta, dias_velocidades)
+            con_datos = [d for d in dias_velocidades if desde <= d <= hasta]
+            if con_datos:
+                omitidas, filas, entradas, expediciones, trasvasijes = _calcular(
+                    cur, calculo_id, min(con_datos), max(con_datos), dias_velocidades)
+            else:
+                omitidas, filas, entradas, expediciones, trasvasijes = (
+                    ["No hay velocidades vigentes en el rango: esas fechas quedan sin ICFP."], [], [], [], [])
             _insertar(cur, "icfp_sspd", [{"calculo_id": calculo_id, **f} for f in filas])
             _insertar(cur, "icfp_expedicion", expediciones)
             _insertar(cur, "icfp_trasvasije", trasvasijes)
             _insertar(cur, "calculo_entrada", entradas)
             fechas = len({f["fecha"] for f in filas})
-            if not fechas:
-                raise ErrorDeCalculo("Ninguna fecha del rango se pudo calcular. " + " ".join(omitidas))
             cur.execute(
                 """UPDATE calculo SET estado = 'OK', fin_at = %s, fechas_calculadas = %s, mensaje_error = %s
                    WHERE calculo_id = %s""",

@@ -18,12 +18,13 @@ import hashlib
 import logging
 import sys
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
 from .db import conexion
 from .migraciones import aplicar as aplicar_migraciones
+from .vigencias import eliminar_carga
 from .lectores import LECTORES
 from .recalculo import encolar_por_carga, procesar_pendientes
 
@@ -56,6 +57,29 @@ def vaciar_cola(config: Config) -> None:
 def _mover(contenedor, origen: str, destino: str, contenido: bytes, metadatos: dict[str, str]) -> None:
     contenedor.get_blob_client(destino).upload_blob(contenido, overwrite=True, metadata=metadatos)
     contenedor.delete_blob(origen)
+
+
+def _reemplazar(conn, tipo: str, anterior: int, nueva: int, usuario: str) -> str:
+    """Archivo subido con "Reemplazar" en la web: la carga anterior se elimina (sus días pasan a la
+    nueva si la nueva los cubre). Devuelve el resultado para mostrarlo en la web."""
+
+    if anterior == nueva:
+        return "OK"
+    with conn.cursor() as cur:
+        cur.execute("SELECT tipo_archivo FROM control_carga WHERE carga_id = %s", (anterior,))
+        fila = cur.fetchone()
+        if not fila or fila[0] != tipo:
+            return f"No se eliminó la carga {anterior}: no es un archivo de {tipo}."
+        r = eliminar_carga(cur, anterior, usuario=usuario)
+    if r.errores:
+        conn.rollback()
+        return f"No se eliminó la carga {anterior}: " + " ".join(r.errores)
+    conn.commit()
+    sin = [c for c in r.cambios if c.despues is None]
+    if sin:
+        return (f"OK. Ojo: el archivo nuevo no cubre {sum((c.hasta - c.desde).days + 1 for c in sin)} día(s) que "
+                "cubría el anterior; esos días quedaron sin archivo.")
+    return "OK"
 
 
 def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str, metadatos: dict[str, str],
@@ -109,6 +133,10 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
         )
         return "ERROR"
 
+    extra = {}
+    reemplaza = metadatos.get("reemplaza")
+    if reemplaza and resultado.estado == "COMPLETADO":
+        extra["reemplazo"] = quote(_reemplazar(conn, tipo, int(reemplaza), resultado.carga_id, subido_por), safe=" @._-()")
     _mover(
         contenedor,
         blob_nombre,
@@ -116,6 +144,7 @@ def procesar_blob(config: Config, contenedor, conn, tipo: str, blob_nombre: str,
         contenido,
         {
             **metadatos,
+            **extra,
             "estado": resultado.estado,
             "carga_id": str(resultado.carga_id),
             "filas": str(resultado.filas_cargadas),
