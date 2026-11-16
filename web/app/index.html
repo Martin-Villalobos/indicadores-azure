@@ -50,6 +50,19 @@
     table.maestro td.meta { color:var(--muted); font-size:.8rem; }
     table.maestro button { font:inherit; font-size:.85rem; border:0; background:none; color:var(--accent); cursor:pointer; padding:2px 6px; }
     table.maestro button.borrar { color:var(--err); }
+    table.maestro a { font-size:.85rem; color:var(--accent); text-decoration:none; padding:2px 6px; }
+    .separador { border:0; border-top:1px solid var(--line); margin:24px 0 16px; }
+    .accion { margin:0 0 14px; padding:12px 14px; border:1px solid var(--accent); border-radius:6px; background:#f3f8fd; display:grid; gap:10px; }
+    .accion h3 { margin:0; font-size:.95rem; }
+    .accion ul { margin:0; padding-left:18px; font-size:.9rem; }
+    .accion li.err { color:var(--err); font-weight:600; }
+    .accion .fila { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .accion input[type=date] { font:inherit; padding:6px; border:1px solid var(--line); border-radius:6px; }
+    .boton.peligro { background:var(--err); }
+    table.maestro td.archivo { white-space:normal; min-width:220px; }
+    table.maestro tr.nuevo-archivo td { border-top:2px solid var(--line); }
+    .chip { display:inline-block; font-size:.75rem; padding:1px 6px; border-radius:10px; background:#fff3c4; color:#7a5b00; margin-left:4px; }
+    .chip.gris { background:#eef1f4; color:var(--muted); }
     footer { text-align:center; color:var(--muted); font-size:.8rem; margin:24px 0; }
   </style>
 </head>
@@ -85,6 +98,29 @@
         <button class="boton" id="btn-cargar" type="submit">Subir y cargar</button>
       </form>
       <div id="resultado" class="resultado" hidden></div>
+
+      <hr class="separador">
+      <h2>Archivos cargados</h2>
+      <p>Qué archivo rige cada fecha. Los anexos se muestran "cortados": si un archivo más corto cubre parte
+        de las fechas de otro, el otro rige sólo el resto. Eliminar, reemplazar o cambiar fechas recalcula los indicadores.</p>
+      <div class="maestros-barra">
+        <select id="arch-tipo">
+          <option value="anexo1">Anexo 1</option>
+          <option value="anexo3">Anexo 3</option>
+          <option value="velocidades">Velocidades</option>
+          <option value="exclusiones">Exclusiones</option>
+        </select>
+        <input type="search" id="arch-filtro" placeholder="Buscar por nombre, fecha o carga…">
+        <span id="arch-cuenta" class="meta"></span>
+      </div>
+      <div id="arch-accion" class="accion" hidden></div>
+      <div id="arch-aviso" class="resultado" hidden></div>
+      <div class="tabla-wrap"><table class="maestro" id="arch-tabla"></table></div>
+      <details id="arch-errores" hidden>
+        <summary>Archivos con error</summary>
+        <div class="tabla-wrap"><table class="maestro" id="arch-tabla-errores"></table></div>
+      </details>
+      <input type="file" id="arch-reemplazo" accept=".xlsx" hidden>
     </section>
 
     <section class="card" id="panel-maestros" hidden>
@@ -119,6 +155,7 @@
       panelCarga.hidden = p.tipo !== "carga";
       panelMaestros.hidden = p.tipo !== "maestros";
       if (p.tipo === "maestros") abrirMaestros();
+      if (p.tipo === "carga") cargarArchivos();
       if (p.tipo === "reporte") {
         document.getElementById("titulo").textContent = p.nombre;
         document.getElementById("descripcion").textContent = p.descripcion;
@@ -212,6 +249,7 @@
         const d = await esperarResultado(subida.blob);
         if (d.estado === "COMPLETADO" || d.estado === "ACTUALIZADO") {
           aviso(`✓ ${archivo.name}: cargado (${d.filas_cargadas} filas, carga ${d.carga_id}).`, true);
+          if ([...selArch.options].some(o => o.value === tipo)) { selArch.value = tipo; cargarArchivos(); }
         } else if (d.estado === "DUPLICADO") {
           aviso(`Este archivo ya se había cargado antes (carga ${d.carga_id}). No se cargó de nuevo.`, true);
         } else if (d.estado === "PROCESANDO") {
@@ -401,6 +439,256 @@
       avisoMaestro(`✓ ${clave.titulo} ${normal} agregado. ` + d.mensaje.replace(/^Guardado\. /, ""), true);
       formM.querySelector("input").focus();
     });
+
+    // ----- Archivos cargados -----
+    const selArch = document.getElementById("arch-tipo");
+    const filtroArch = document.getElementById("arch-filtro");
+    const tablaArch = document.getElementById("arch-tabla");
+    const panelAccion = document.getElementById("arch-accion");
+    const avisoArch = document.getElementById("arch-aviso");
+    const inputReemplazo = document.getElementById("arch-reemplazo");
+    let ARCH = null;
+
+    const fmt = iso => iso ? iso.slice(0, 10).split("-").reverse().join("-") : "—";
+    const dias = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5) + 1;
+    const el = (tag, texto, clase) => { const e = document.createElement(tag); if (texto != null) e.textContent = texto; if (clase) e.className = clase; return e; };
+    const nombreCarga = id => { const a = ARCH && ARCH.archivos.find(x => x.carga_id === id); return a ? `«${a.nombre_archivo}» (carga ${id})` : `carga ${id}`; };
+
+    function avisoA(texto, ok) {
+      avisoArch.hidden = !texto;
+      avisoArch.className = "resultado " + (ok ? "ok" : "err");
+      avisoArch.textContent = texto || "";
+    }
+
+    // Sigue el tipo elegido arriba para subir, si es uno de los que se listan.
+    document.getElementById("tipo").addEventListener("change", e => {
+      if ([...selArch.options].some(o => o.value === e.target.value)) { selArch.value = e.target.value; cargarArchivos(); }
+    });
+    selArch.onchange = () => { filtroArch.value = ""; cargarArchivos(); };
+    filtroArch.oninput = () => dibujarArchivos();
+
+    async function cargarArchivos() {
+      cerrarAccion();
+      try {
+        const d = await leerJson(await fetch(`/api/archivos?tipo=${selArch.value}`, { cache: "no-store" }));
+        if (!d.archivos) throw new Error(d.mensaje || "respuesta inesperada");
+        ARCH = d;
+        dibujarArchivos();
+      } catch (err) {
+        ARCH = null;
+        tablaArch.replaceChildren();
+        avisoA("No se pudieron leer los archivos cargados: " + err.message, false);
+      }
+    }
+
+    function botones(a) {
+      const td = el("td");
+      const desc = el("a", "Descargar");
+      desc.href = `/api/archivos?descargar=${a.carga_id}`;
+      desc.style.marginRight = "6px";
+      td.append(desc);
+      if (ARCH.cobertura === "RANGO") { const b = el("button", "Cambiar fechas"); b.onclick = () => abrirFechas(a); td.append(b); }
+      const r = el("button", "Reemplazar"); r.onclick = () => elegirReemplazo(a); td.append(r);
+      const x = el("button", "Eliminar", "borrar"); x.onclick = () => simularEliminar(a); td.append(x);
+      return td;
+    }
+
+    function celdaArchivo(a) {
+      const td = el("td", null, "archivo");
+      td.append(el("span", a.nombre_archivo), el("span", `carga ${a.carga_id}`, "chip gris"));
+      if (a.modificado_por) td.append(el("span", "fechas modificadas", "chip"));
+      return td;
+    }
+
+    function dibujarArchivos() {
+      if (!ARCH) return;
+      avisoA("");
+      const q = filtroArch.value.trim().toLowerCase();
+      const coincide = (...v) => !q || v.some(x => String(x ?? "").toLowerCase().includes(q));
+      const porId = Object.fromEntries(ARCH.archivos.map(a => [a.carga_id, a]));
+      const cab = el("tr");
+      let filas = [];
+      if (ARCH.cobertura === "DIA") {
+        ["Día", "Archivo", "Filas", "Subido por", "Cargado", "Estado", ""].forEach(t => cab.append(el("th", t)));
+        const rigen = new Set(ARCH.tramos.map(t => t.carga_id));
+        for (const a of [...ARCH.archivos].sort((x, y) => (y.vigencia_desde || "").localeCompare(x.vigencia_desde || "") || y.carga_id - x.carga_id)) {
+          if (!coincide(a.nombre_archivo, a.carga_id, a.subido_por, fmt(a.vigencia_desde), a.vigencia_desde)) continue;
+          const tr = el("tr");
+          tr.append(el("td", fmt(a.vigencia_desde)), celdaArchivo(a), el("td", a.filas), el("td", a.subido_por, "meta"),
+                    el("td", (a.cargado_at || "").slice(0, 16), "meta"),
+                    el("td", rigen.has(a.carga_id) ? "Rige" : "Reemplazado por otro archivo del mismo día", rigen.has(a.carga_id) ? null : "meta"),
+                    botones(a));
+          filas.push(tr);
+        }
+      } else {
+        ["Desde", "Hasta", "Días", "Archivo", "Fechas del archivo", "Subido por", ""].forEach(t => cab.append(el("th", t)));
+        const conTramo = new Set();
+        const tramos = [];
+        for (const t of ARCH.tramos) {  // une tramos consecutivos del mismo archivo
+          const u = tramos[tramos.length - 1];
+          if (u && u.carga_id === t.carga_id && dias(u.hasta, t.desde) === 2) u.hasta = t.hasta;
+          else tramos.push({ ...t });
+        }
+        for (const t of tramos) {
+          const a = porId[t.carga_id];
+          if (!a) continue;
+          conTramo.add(a.carga_id);
+          if (!coincide(a.nombre_archivo, a.carga_id, a.subido_por, fmt(t.desde), fmt(t.hasta), t.desde, t.hasta)) continue;
+          filas.push(filaTramo(a, t.desde, t.hasta));
+        }
+        for (const a of ARCH.archivos.filter(a => !conTramo.has(a.carga_id))) {
+          if (!coincide(a.nombre_archivo, a.carga_id, a.subido_por)) continue;
+          const tr = filaTramo(a, null, null);
+          tr.children[2].textContent = "0";
+          tr.children[0].textContent = "No rige ningún día";
+          tr.children[0].colSpan = 1;
+          filas.push(tr);
+        }
+      }
+      tablaArch.replaceChildren(cab, ...filas);
+      if (!filas.length) {
+        const tr = tablaArch.insertRow(); const td = tr.insertCell();
+        td.colSpan = 7; td.className = "meta";
+        td.textContent = ARCH.archivos.length ? "Ningún archivo coincide con la búsqueda." : `Todavía no hay archivos de ${ARCH.nombre}.`;
+      }
+      document.getElementById("arch-cuenta").textContent = `${ARCH.archivos.length} archivo(s)`;
+      const errores = document.getElementById("arch-errores");
+      errores.hidden = !ARCH.errores.length;
+      const te = document.getElementById("arch-tabla-errores");
+      const ce = el("tr"); ["Carga", "Archivo", "Subido por", "Fecha", "Error"].forEach(t => ce.append(el("th", t)));
+      te.replaceChildren(ce, ...ARCH.errores.map(e => {
+        const tr = el("tr");
+        const msg = el("td", e.mensaje, "archivo");
+        tr.append(el("td", e.carga_id), el("td", e.nombre_archivo, "archivo"), el("td", e.subido_por, "meta"), el("td", (e.subido_at || "").slice(0, 16), "meta"), msg);
+        return tr;
+      }));
+    }
+
+    function filaTramo(a, desde, hasta) {
+      const tr = el("tr");
+      const rango = el("td", `${fmt(a.vigencia_desde)} al ${fmt(a.vigencia_hasta)}`, "archivo");
+      if (a.modificado_por) {
+        rango.append(el("div", `El archivo trae ${fmt(a.archivo_desde)} al ${fmt(a.archivo_hasta)}. Modificado por ${a.modificado_por} el ${(a.modificado_at || "").slice(0, 16)}.`, "meta"));
+      }
+      tr.append(el("td", fmt(desde)), el("td", fmt(hasta)), el("td", desde ? dias(desde, hasta) : ""), celdaArchivo(a), rango,
+                el("td", `${a.subido_por || ""} · ${(a.cargado_at || "").slice(0, 16)}`, "meta"), botones(a));
+      return tr;
+    }
+
+    // Panel de acción: título, contenido, lista de errores/advertencias y botones.
+    function cerrarAccion() { panelAccion.hidden = true; panelAccion.replaceChildren(); }
+
+    function abrirAccion(titulo, ...contenido) {
+      panelAccion.replaceChildren(el("h3", titulo), ...contenido);
+      panelAccion.hidden = false;
+      avisoA("");
+      panelAccion.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function listaAvisos(errores, advertencias) {
+      const ul = el("ul");
+      (errores || []).forEach(t => ul.append(el("li", "✗ " + t, "err")));
+      (advertencias || []).forEach(t => ul.append(el("li", t)));
+      return ul;
+    }
+
+    function botonesConfirmar(textoConfirmar, alConfirmar, peligro) {
+      const fila = el("div", null, "fila");
+      const ok = el("button", textoConfirmar, "boton" + (peligro ? " peligro" : ""));
+      ok.type = "button";
+      ok.onclick = async () => { ok.disabled = true; ok.textContent = "Aplicando…"; try { await alConfirmar(); } finally { ok.disabled = false; } };
+      const no = el("button", "Cancelar", "boton sec"); no.type = "button"; no.onclick = cerrarAccion;
+      fila.append(ok, no);
+      return fila;
+    }
+
+    async function postArchivos(cuerpo) {
+      const r = await fetch("/api/archivos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
+      return leerJson(r);
+    }
+
+    async function terminar(d) {
+      if (d.estado !== "OK") {
+        abrirAccion("No se pudo aplicar", listaAvisos(d.errores || [d.mensaje || "Error desconocido."], d.advertencias),
+                    botonesConfirmar("Cerrar", async () => cerrarAccion()));
+        return;
+      }
+      await cargarArchivos();
+      avisoA("✓ " + d.mensaje + (d.advertencias && d.advertencias.length ? "\n" + d.advertencias.join("\n") : ""), true);
+    }
+
+    async function simularEliminar(a) {
+      const d = await postArchivos({ accion: "eliminar", carga_id: a.carga_id, confirmar: false });
+      const lista = listaAvisos(d.errores, d.advertencias);
+      if (d.estado !== "SIMULACION") {
+        abrirAccion(`Eliminar ${nombreCarga(a.carga_id)}`, lista, botonesConfirmar("Cerrar", async () => cerrarAccion()));
+        return;
+      }
+      abrirAccion(`¿Eliminar ${nombreCarga(a.carga_id)}?`, el("p", "El archivo deja de regir sus fechas. Queda guardado y se puede volver a subir."), lista,
+        botonesConfirmar("Eliminar", async () => terminar(await postArchivos({ accion: "eliminar", carga_id: a.carga_id, confirmar: true })), true));
+    }
+
+    function abrirFechas(a) {
+      const fila = el("div", null, "fila");
+      const lDesde = el("label", "Desde"); const iDesde = el("input"); iDesde.type = "date"; iDesde.value = a.vigencia_desde; lDesde.append(iDesde);
+      const lHasta = el("label", "Hasta"); const iHasta = el("input"); iHasta.type = "date"; iHasta.value = a.vigencia_hasta; lHasta.append(iHasta);
+      const revisar = el("button", "Revisar cambios", "boton"); revisar.type = "button";
+      const cancelar = el("button", "Cancelar", "boton sec"); cancelar.type = "button"; cancelar.onclick = cerrarAccion;
+      fila.append(lDesde, lHasta, revisar, cancelar);
+      const resultadoSim = el("div");
+      const nota = el("p", `El archivo trae del ${fmt(a.archivo_desde)} al ${fmt(a.archivo_hasta)}. ` +
+        "Con la regla de siempre, en cada fecha rige el archivo de rango más corto; a igual largo, el último cambiado.", "meta");
+      abrirAccion(`Cambiar fechas de ${nombreCarga(a.carga_id)}`, nota, fila, resultadoSim);
+      revisar.onclick = async () => {
+        const cuerpo = { accion: "cambiar_fechas", carga_id: a.carga_id, desde: iDesde.value, hasta: iHasta.value };
+        const d = await postArchivos({ ...cuerpo, confirmar: false });
+        const partes = [listaAvisos(d.errores, d.advertencias)];
+        if (d.estado === "SIMULACION") {
+          partes.push(botonesConfirmar("Confirmar cambio", async () => terminar(await postArchivos({ ...cuerpo, confirmar: true }))));
+        }
+        resultadoSim.replaceChildren(...partes);
+      };
+    }
+
+    let reemplazando = null;
+    function elegirReemplazo(a) {
+      reemplazando = a;
+      inputReemplazo.value = "";
+      inputReemplazo.click();
+    }
+
+    inputReemplazo.onchange = () => {
+      const a = reemplazando, archivo = inputReemplazo.files[0];
+      if (!a || !archivo) return;
+      const tipo = ARCH.tipo;
+      const advertencias = [
+        `Se sube «${archivo.name}» como un archivo nuevo de ${ARCH.nombre}. Cuando quede cargado, ${nombreCarga(a.carga_id)} se elimina.`,
+        ARCH.cobertura === "DIA"
+          ? `Si el archivo nuevo no es del ${fmt(a.vigencia_desde)}, ese día queda sin velocidades.`
+          : `Si el archivo nuevo no cubre del ${fmt(a.vigencia_desde)} al ${fmt(a.vigencia_hasta)}, los días que falten pasan a otro archivo o quedan sin archivo.`,
+        "Si el archivo nuevo tiene errores, no se elimina nada.",
+      ];
+      abrirAccion(`¿Reemplazar ${nombreCarga(a.carga_id)}?`, listaAvisos([], advertencias), botonesConfirmar("Reemplazar", async () => {
+        const url = `/api/cargar?tipo=${encodeURIComponent(tipo)}&nombre=${encodeURIComponent(archivo.name)}&reemplaza=${a.carga_id}`;
+        const subida = await leerJson(await fetch(url, { method: "POST", body: archivo, headers: { "Content-Type": "application/octet-stream" } }));
+        if (subida.estado !== "RECIBIDO") return terminar({ estado: "ERROR", errores: [subida.mensaje || "No se pudo subir."] });
+        abrirAccion(`Reemplazando ${nombreCarga(a.carga_id)}…`, el("p", `${archivo.name} recibido. Procesando… (suele tardar menos de un minuto)`));
+        const d = await esperarResultado(subida.blob);
+        if (d.estado === "COMPLETADO") {
+          const ok = !d.reemplazo || d.reemplazo.startsWith("OK");
+          cerrarAccion();
+          await cargarArchivos();
+          avisoA((ok ? "✓ " : "✗ ") + `${archivo.name} cargado (carga ${d.carga_id}). ` +
+                 (ok ? `${nombreCarga(a.carga_id)} quedó eliminado. ` + (d.reemplazo || "").replace(/^OK\.? ?/, "") + " Los indicadores se recalculan en unos minutos." : d.reemplazo), ok);
+        } else if (d.estado === "DUPLICADO") {
+          terminar({ estado: "ERROR", errores: [`Ese archivo ya estaba cargado (carga ${d.carga_id}). No se reemplazó nada.`] });
+        } else if (d.estado === "PROCESANDO") {
+          terminar({ estado: "ERROR", errores: ["Sigue en proceso. Revisa la lista en unos minutos."] });
+        } else {
+          terminar({ estado: "ERROR", errores: [`El archivo nuevo no se pudo cargar, así que no se reemplazó nada: ${d.mensaje || "error desconocido"}`] });
+        }
+      }));
+    };
   </script>
 </body>
 </html>

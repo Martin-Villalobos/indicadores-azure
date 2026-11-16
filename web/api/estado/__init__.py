@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+from urllib.parse import unquote
 
 import azure.functions as func
 
@@ -47,6 +48,7 @@ def _main(req: func.HttpRequest) -> func.HttpResponse:
             "estado": meta.get("estado", "COMPLETADO"),
             "carga_id": meta.get("carga_id"),
             "filas_cargadas": meta.get("filas"),
+            "reemplazo": unquote(meta["reemplazo"]) if meta.get("reemplazo") else None,
         })
 
     if propiedades(f"{tipo}/errores/{nombre}") is not None:

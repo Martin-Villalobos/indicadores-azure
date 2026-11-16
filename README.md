@@ -30,6 +30,23 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 | `dev/` | Web local (`servidor_web.py`), reemplaza a la Static Web App en dev |
 | `docker-compose.yml` | Entorno dev completo: MySQL, Azurite, seeder, job y web |
 
+## Archivos cargados (web)
+
+En la pestaña **Cargar archivos**, debajo del formulario, se listan los archivos COMPLETADO de cada tipo (`/api/archivos`):
+
+- **Anexos y exclusiones**: una fila por tramo vigente ("cortado"): si un anexo más corto cubre parte de las fechas de otro, el otro rige sólo el resto.
+- **Velocidades**: una fila por archivo con su día.
+- **Descargar** baja el original desde el blob.
+- **Eliminar**: la carga queda ELIMINADO (sus filas quedan como historia) y sus fechas pasan al archivo que corresponda por la regla, o a ninguno. Volver a subir el mismo archivo la reactiva.
+- **Cambiar fechas** (anexos): cambia `control_carga.vigencia_desde/hasta` y se vuelve a decidir qué archivo rige cada día. A igual largo gana el último cambiado.
+- **Reemplazar**: sube el archivo nuevo con `?reemplaza=<carga_id>`. Cuando el job lo carga, elimina el anterior; si el nuevo falla, no se toca nada.
+
+Antes de confirmar, la web muestra lo que cambia: tramos que pasan de un archivo a otro, días que quedan sin archivo y fechas que se recalculan. Al confirmar, se encola el recálculo y se avisa al job.
+
+La lógica está en `src/indicadores_azure/vigencias.py` (`reconstruir`, `eliminar_carga`, `cambiar_fechas`). La web usa una copia en `web/api/compartido/vigencias.py`, y un test revisa que sean iguales.
+
+Un cálculo cubre siempre todo el rango pedido, aunque algunas fechas queden sin datos, y `v_calculo_vigente` toma el último cálculo que cubre cada fecha. Así, al eliminar un archivo, los resultados viejos de esas fechas dejan de verse.
+
 ## Cálculo del ICFP
 
 Cuando el job completa una carga de Anexo 3, velocidades, exclusiones o flota, encola en `recalculo_pendiente` las fechas que esa carga rige (±1 día por el trasvasije) y las recalcula. El cálculo (`src/indicadores_azure/icfp/`) es el de indicadores-bi:

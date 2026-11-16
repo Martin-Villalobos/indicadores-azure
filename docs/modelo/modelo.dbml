@@ -82,7 +82,11 @@ Table control_carga {
   fin_at datetime
   filas_leidas int
   filas_cargadas int
+  vigencia_desde date [note: 'rango que cubre la carga (el del archivo o el cambiado en la web); decide qué días rige']
+  vigencia_hasta date
   mensaje_error text
+  modificado_por varchar(255) [note: 'quién eliminó la carga o le cambió las fechas desde la web']
+  modificado_at datetime
 
   indexes {
     (tipo_archivo, hash_sha256) [unique, name: 'uq_control_carga_tipo_hash']

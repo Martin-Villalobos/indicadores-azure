@@ -123,4 +123,5 @@ def test_los_sql_del_repo_son_idempotentes():
             primera = s.split(None, 3)[:3]
             assert (
                 s.startswith(("CREATE TABLE IF NOT EXISTS", "INSERT IGNORE", "CREATE OR REPLACE VIEW", "ALTER TABLE"))
+                or (s.startswith("UPDATE") and "IS NULL" in s)  # sólo completa lo que falta
             ), f"{archivo.name}: sentencia no idempotente: {' '.join(primera)}"

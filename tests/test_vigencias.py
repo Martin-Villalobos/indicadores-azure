@@ -70,3 +70,30 @@ def test_rango_invertido():
 def test_rango_mes():
     assert rango_mes(D(2, 3), D(2, 27)) == (D(2, 1), D(2, 28))
     assert rango_mes(D(11, 5), date(2026, 12, 3)) == (D(11, 1), date(2026, 12, 31))
+
+
+# --- reconstruir (eliminar / cambiar fechas desde la web) ---
+from datetime import datetime as _dt
+
+from indicadores_azure.vigencias import Candidato, Cambio, asignar, comparar
+
+
+def _c(cid, desde, hasta, cuando=1):
+    return Candidato(cid, desde, hasta, (_dt(2026, 1, cuando), cid))
+
+
+def test_asignar_gana_el_mas_corto_y_a_igual_largo_el_mas_nuevo():
+    jul_nov = _c(1, date(2026, 7, 4), date(2026, 11, 13))
+    sep = _c(2, date(2026, 9, 18), date(2026, 9, 19))
+    otro_sep = _c(3, date(2026, 9, 18), date(2026, 9, 19), cuando=2)
+    dias = asignar([jul_nov, sep, otro_sep], date(2026, 9, 17), date(2026, 9, 20))
+    assert dias == {date(2026, 9, 17): 1, date(2026, 9, 18): 3, date(2026, 9, 19): 3, date(2026, 9, 20): 1}
+
+
+def test_comparar_agrupa_tramos_y_marca_dias_sin_archivo():
+    antes = {date(2026, 9, d): 2 for d in (18, 19)} | {date(2026, 9, 20): 1}
+    despues = {date(2026, 9, d): 1 for d in (18, 19)}
+    assert comparar(antes, despues, date(2026, 9, 18), date(2026, 9, 20)) == [
+        Cambio(date(2026, 9, 18), date(2026, 9, 19), 2, 1),
+        Cambio(date(2026, 9, 20), date(2026, 9, 20), 1, None),
+    ]
