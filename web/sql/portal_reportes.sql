@@ -21,6 +21,10 @@ CREATE TABLE reporte (
   nombre      VARCHAR(100) NOT NULL,
   descripcion VARCHAR(500) NULL,
   url_powerbi VARCHAR(1000) NOT NULL,
+  -- Tamaño del lienzo en Power BI (Formato → Configuración de lienzo). La web da al
+  -- recuadro esa misma proporción, así un reporte vertical se ve completo con "Ajustar al ancho".
+  ancho_lienzo INT NOT NULL DEFAULT 1280,
+  alto_lienzo  INT NOT NULL DEFAULT 720,
   orden       INT NOT NULL DEFAULT 0,
   activo      TINYINT(1) NOT NULL DEFAULT 1,
   FOREIGN KEY (menu_id) REFERENCES menu(id)

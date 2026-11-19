@@ -16,9 +16,9 @@ API = Path(__file__).resolve().parents[1] / "web" / "api"
 # Filas como las devuelve la consulta de compartido/portal.py, por email.
 MENU = {
     "ana@empresa.cl": [
-        (1, "Indicadores Operacionales", None, 1, 10, "ICFP", "Frecuencia y plazas", 1),
-        (1, "Indicadores Operacionales", None, 1, 11, "ICB", None, 2),
-        (2, "ITE", "reloj", 2, 20, "IP", "Puntualidad", 1),
+        (1, "Indicadores Operacionales", None, 1, 10, "ICFP", "Frecuencia y plazas", 1, 1280, 2000),
+        (1, "Indicadores Operacionales", None, 1, 11, "ICB", None, 2, 1280, 720),
+        (2, "ITE", "reloj", 2, 20, "IP", "Puntualidad", 1, 1280, 720),
     ],
 }
 URLS = {("ana@empresa.cl", 10): "https://app.powerbi.com/view?r=abc", ("ana@empresa.cl", 11): ""}
@@ -93,11 +93,11 @@ def test_menu_agrupado_sin_enlaces(api):
     assert resp.headers["Cache-Control"] == "no-store"
     assert json.loads(resp.get_body()) == [
         {"id": 1, "nombre": "Indicadores Operacionales", "icono": None, "reportes": [
-            {"id": 10, "nombre": "ICFP", "descripcion": "Frecuencia y plazas"},
-            {"id": 11, "nombre": "ICB", "descripcion": ""},
+            {"id": 10, "nombre": "ICFP", "descripcion": "Frecuencia y plazas", "ancho": 1280, "alto": 2000},
+            {"id": 11, "nombre": "ICB", "descripcion": "", "ancho": 1280, "alto": 720},
         ]},
         {"id": 2, "nombre": "ITE", "icono": "reloj", "reportes": [
-            {"id": 20, "nombre": "IP", "descripcion": "Puntualidad"},
+            {"id": 20, "nombre": "IP", "descripcion": "Puntualidad", "ancho": 1280, "alto": 720},
         ]},
     ]
     assert b"powerbi" not in resp.get_body()

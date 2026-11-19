@@ -23,16 +23,18 @@ def menu_usuario(conn, email: str) -> list[dict]:
 
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT DISTINCT m.id, m.nombre, m.icono, m.orden, r.id, r.nombre, r.descripcion, r.orden"
+            "SELECT DISTINCT m.id, m.nombre, m.icono, m.orden, r.id, r.nombre, r.descripcion, r.orden,"
+            " r.ancho_lienzo, r.alto_lienzo"
             + _VISIBLES + "ORDER BY m.orden, m.id, r.orden, r.id",
             (email,),
         )
         filas = cur.fetchall()
 
     menus: dict[int, dict] = {}
-    for menu_id, menu, icono, _, reporte_id, reporte, descripcion, _ in filas:
+    for menu_id, menu, icono, _, reporte_id, reporte, descripcion, _, ancho, alto in filas:
         m = menus.setdefault(menu_id, {"id": menu_id, "nombre": menu, "icono": icono, "reportes": []})
-        m["reportes"].append({"id": reporte_id, "nombre": reporte, "descripcion": descripcion or ""})
+        m["reportes"].append({"id": reporte_id, "nombre": reporte, "descripcion": descripcion or "",
+                              "ancho": ancho, "alto": alto})
     return list(menus.values())
 
 
