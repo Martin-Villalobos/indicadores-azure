@@ -1,52 +1,38 @@
-"""Entrega la lista de dashboards (nombre y descripción) sólo a usuarios con login.
+"""Menú lateral de la web: los menús y reportes de Power BI que puede ver el usuario.
 
-Los enlaces de "Publicar en la web" no van en el código ni en el repo: se guardan en la
-variable de entorno DASHBOARDS de la Static Web App, como JSON:
-    [{"nombre": "IP del mes", "descripcion": "...", "url": "https://app.powerbi.com/view?r=..."}]
-Esta API no entrega las URL: cada dashboard sale con su número ("id"), y la página lo
-abre con /api/reporte/<id>, que redirige al enlace. Así el enlace no queda en la página.
+GET /api/dashboards -> [{"id", "nombre", "icono", "reportes": [{"id", "nombre", "descripcion"}]}]
+
+Se lee de la base portal_reportes (tablas menu, reporte, usuario, rol, usuario_rol, permiso;
+ver web/sql/portal_reportes.sql) según el email con que el usuario inició sesión en Entra ID.
+No entrega las URL: la página abre cada reporte con /api/reporte/<id>, que redirige al enlace.
 Static Web Apps sólo deja llegar aquí a usuarios con el rol "empleado".
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
+import sys
+from pathlib import Path
 
 import azure.functions as func
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # web/api, para "compartido"
 
-def leer_dashboards() -> list[dict]:
-    """Lee DASHBOARDS. Lanza ValueError si falta o no es un JSON válido."""
-
-    crudo = os.getenv("DASHBOARDS", "").strip()
-    if not crudo:
-        raise ValueError("Falta la variable de entorno DASHBOARDS en la Static Web App.")
-    try:
-        return [
-            {"nombre": str(d["nombre"]), "descripcion": str(d.get("descripcion", "")), "url": str(d.get("url", ""))}
-            for d in json.loads(crudo)
-        ]
-    except (ValueError, TypeError, KeyError) as exc:
-        raise ValueError(f"La variable DASHBOARDS no es un JSON válido: {exc}") from exc
-
-
-def _respuesta(datos, status: int = 200) -> func.HttpResponse:
-    return func.HttpResponse(
-        json.dumps(datos, ensure_ascii=False),
-        status_code=status,
-        mimetype="application/json",
-        headers={"Cache-Control": "no-store"},
-    )
+from compartido import portal, web  # noqa: E402
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
+    email = web.usuario(req)
     try:
-        dashboards = leer_dashboards()
-    except ValueError as exc:
-        logging.exception("DASHBOARDS inválido")
-        return _respuesta({"mensaje": str(exc)}, 500)
-    return _respuesta([
-        {"id": i, "nombre": d["nombre"], "descripcion": d["descripcion"]} for i, d in enumerate(dashboards)
-    ])
+        conn = web.conexion_portal()
+        try:
+            menus = portal.menu_usuario(conn, email)
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001
+        logging.exception("No se pudo leer el menú de portal_reportes")
+        resp = web.respuesta({"mensaje": "No se pudo leer el menú de reportes."}, 500)
+    else:
+        resp = web.respuesta(menus)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
