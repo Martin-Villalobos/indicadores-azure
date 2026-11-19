@@ -33,8 +33,10 @@
     .card h2 { margin:0 0 4px; font-size:1.05rem; }
     .card p { margin:0 0 12px; color:var(--muted); font-size:.9rem; }
     /* La barra inferior de "Publicar en la web" (compartir, pantalla completa, logo) queda
-       fuera del recuadro: el iframe es más alto que el contenedor y se recorta. */
-    .report { position:relative; width:100%; padding-top:56.25%; overflow:hidden; }
+       fuera del recuadro: el iframe es más alto que el contenedor y se recorta.
+       El recuadro usa todo el alto visible de la ventana (no 16:9): los reportes pueden
+       ser más altos que anchos, con "Ajustar al ancho" en Power BI. */
+    .report { position:relative; width:100%; height:calc(100vh - 180px); min-height:480px; overflow:hidden; }
     .report iframe { position:absolute; top:0; left:0; width:100%; height:calc(100% + var(--barra-pbi)); border:0; }
     :root { --barra-pbi: 40px; }
     [hidden] { display:none !important; }
