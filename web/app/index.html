@@ -33,7 +33,10 @@
     .card h2 { margin:0 0 4px; font-size:1.05rem; }
     .card p { margin:0 0 12px; color:var(--muted); font-size:.9rem; }
     /* La barra inferior de "Publicar en la web" (compartir, pantalla completa, logo) queda
-       fuera del recuadro: el iframe es más alto que el contenedor y se recorta. */
+       fuera del recuadro: el iframe es más alto que el contenedor y se recorta.
+       El alto del recuadro sigue la proporción del lienzo de cada reporte (ancho_lienzo y
+       alto_lienzo en portal_reportes): un reporte vertical se ve completo y se recorre con
+       el scroll de la página, sin scroll dentro del recuadro. */
     .report { position:relative; width:100%; padding-top:56.25%; overflow:hidden; }
     .report iframe { position:absolute; top:0; left:0; width:100%; height:calc(100% + var(--barra-pbi)); border:0; }
     :root { --barra-pbi: 40px; }
@@ -180,6 +183,8 @@
       if (v.tipo === "reporte") {
         document.getElementById("titulo").textContent = v.nombre;
         document.getElementById("descripcion").textContent = v.descripcion;
+        const proporcion = v.ancho > 0 && v.alto > 0 ? v.alto / v.ancho : 9 / 16;
+        iframe.parentElement.style.paddingTop = (proporcion * 100).toFixed(3) + "%";
         iframe.src = "/api/reporte/" + v.id;
         iframe.title = v.nombre;
         if (v.grupo) abrirGrupo(v.grupo, true);
@@ -215,7 +220,8 @@
         m.reportes.forEach(r => {
           const clave = "r" + r.id;
           const li = document.createElement("li");
-          li.appendChild(item(clave, { tipo: "reporte", id: r.id, nombre: r.nombre, descripcion: r.descripcion, grupo }));
+          li.appendChild(item(clave, { tipo: "reporte", id: r.id, nombre: r.nombre, descripcion: r.descripcion,
+                                       ancho: r.ancho, alto: r.alto, grupo }));
           lista.appendChild(li);
           primera = primera || clave;
         });
