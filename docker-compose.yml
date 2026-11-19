@@ -31,6 +31,9 @@ services:
       - "${MYSQL_PUERTO_LOCAL:-3306}:3306"
     volumes:
       - mysql-datos:/var/lib/mysql
+      # Base del menú de Power BI de la web (sólo se crean con un volumen nuevo).
+      - ./web/sql/portal_reportes.sql:/docker-entrypoint-initdb.d/10_portal_reportes.sql:ro
+      - ./dev/portal_reportes_dev.sql:/docker-entrypoint-initdb.d/20_portal_reportes_dev.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uindicadores", "-pindicadores"]
       interval: 3s

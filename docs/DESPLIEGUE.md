@@ -111,17 +111,35 @@ Luego, con `crontab -e` del mismo usuario que corre `syndirectory.sh`:
 
 App → **Administración de roles → Invitar**: proveedor Microsoft Entra ID, correo, dominio `witty-stone-0193e8a0f.8.azurestaticapps.net`, rol `empleado`, expiración → **Generar** y enviarle el enlace. Plan gratis: hasta 25 personas.
 
-## Dashboards
+## Menú de reportes de Power BI
 
-Los enlaces no están en el código ni llegan a la página: `/api/dashboards` sólo entrega nombre, descripción y un número, y el iframe abre `/api/reporte/<número>`, que redirige (302) al enlace de Power BI. Las dos rutas sólo responden a usuarios con login. Se configuran en la Static Web App → **Configuración → Variables de entorno** → `DASHBOARDS`, con un JSON en una sola línea:
+El menú lateral de la web se arma solo desde la base `portal_reportes` (mismo servidor MySQL, esquema en `web/sql/portal_reportes.sql`): `menu` son los grupos laterales, `reporte` los Power BI de cada grupo (con su `url_powerbi`), y `usuario`, `rol`, `usuario_rol` y `permiso` dicen qué ve cada persona. Agregar un reporte o dar acceso es sólo un INSERT; no hay que volver a publicar la web.
 
+- El usuario se reconoce por el email con que inicia sesión en Entra ID (debe ser el mismo de `usuario.email`). Además tiene que tener el rol `empleado` en la Static Web App (ver arriba) para poder entrar.
+- Un permiso puede ser sobre un menú completo (`menu_id`, ve todos sus reportes, también los que se agreguen después) o sobre un reporte (`reporte_id`).
+- Quien no tiene permisos ve el menú vacío y sólo las herramientas (Cargar archivos, Datos maestros).
+- La API usa las mismas `DB_HOST`, `DB_USER` y `DB_PASSWORD` de Datos maestros; ese usuario necesita al menos `SELECT` sobre `portal_reportes.*`. `PORTAL_DB_NAME` cambia el nombre de la base (por defecto `portal_reportes`).
+
+Ejemplo, un grupo con un reporte visible para un administrador:
+
+```sql
+USE portal_reportes;
+INSERT INTO menu (nombre, orden) VALUES ('Indicadores Operacionales', 1);
+SET @menu = LAST_INSERT_ID();
+INSERT INTO reporte (menu_id, nombre, descripcion, url_powerbi, orden)
+VALUES (@menu, 'ICFP', 'Índice de Cumplimiento de Frecuencia y Plazas.', 'https://app.powerbi.com/view?r=...', 1);
+INSERT INTO rol (nombre, es_admin) VALUES ('Administrador', 1);
+SET @rol = LAST_INSERT_ID();
+INSERT INTO usuario (email, nombre) VALUES ('correo@empresa.cl', 'Nombre');
+INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (LAST_INSERT_ID(), @rol);
+INSERT INTO permiso (rol_id, menu_id) VALUES (@rol, @menu);
 ```
-[{"nombre":"IP del mes","descripcion":"Índice de puntualidad por expedición.","url":"https://app.powerbi.com/view?r=..."},{"nombre":"IE","descripcion":"...","url":"https://app.powerbi.com/view?r=..."}]
-```
 
-Cambiar la variable no requiere volver a publicar la web. `&pageName=ReportSectionXXXX` en la URL abre una página concreta del reporte.
+Los enlaces no llegan a la página: `/api/dashboards` sólo entrega nombres, descripciones y números, y el iframe abre `/api/reporte/<número>`, que revisa el permiso y redirige (302) al enlace. `&pageName=ReportSectionXXXX` en la URL abre una página concreta del reporte.
 
 La página recorta la barra inferior de Power BI (compartir, pantalla completa, logo) y desactiva el clic derecho. Esto dificulta copiar el enlace, pero no lo impide: un usuario con login puede verlo en la pestaña Red de las herramientas del navegador (F12), porque el navegador sigue la redirección. Si un enlace se filtra, en app.powerbi.com → ⚙ → **Administrar códigos para insertar** se elimina y se genera uno nuevo.
+
+La variable `DASHBOARDS` de la Static Web App ya no se usa y se puede borrar.
 
 ## Dominio propio (pendiente)
 

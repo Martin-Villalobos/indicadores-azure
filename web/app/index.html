@@ -12,10 +12,23 @@
     header h1 { margin:0; font-size:1.25rem; font-weight:600; }
     .user { font-size:.9rem; display:flex; gap:12px; align-items:center; }
     .user a { color:#fff; }
-    nav { display:flex; gap:4px; padding:0 24px; background:#fff; border-bottom:1px solid var(--line); overflow-x:auto; }
-    nav button { border:0; background:none; padding:12px 16px; font:inherit; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
-    nav button[aria-selected="true"] { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
-    main { max-width:1300px; margin:20px auto; padding:0 16px; }
+    .layout { display:flex; align-items:flex-start; min-height:calc(100vh - 56px); }
+    nav { flex:0 0 240px; position:sticky; top:0; min-height:calc(100vh - 52px); max-height:100vh; overflow-y:auto; background:#fff; border-right:1px solid var(--line); padding:12px 0; }
+    nav .grupo { border:0; background:none; width:100%; display:flex; justify-content:space-between; align-items:center; padding:10px 16px; font:inherit; font-weight:600; color:var(--text); cursor:pointer; text-align:left; }
+    nav .grupo::after { content:"▸"; color:var(--muted); transition:transform .15s; }
+    nav .grupo[aria-expanded="true"]::after { transform:rotate(90deg); }
+    nav ul { list-style:none; margin:0 0 6px; padding:0; }
+    nav .item { border:0; background:none; width:100%; padding:8px 16px 8px 30px; font:inherit; font-size:.92rem; color:var(--muted); cursor:pointer; text-align:left; border-left:3px solid transparent; }
+    nav .item:hover { background:#f3f6f9; }
+    nav .item[aria-current="true"] { color:var(--accent); border-left-color:var(--accent); background:#eef4fb; font-weight:600; }
+    nav .titulo-seccion { margin:14px 16px 4px; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+    nav .item.herramienta { padding-left:16px; }
+    nav .vacio { margin:8px 16px; font-size:.88rem; color:var(--muted); }
+    main { flex:1; min-width:0; max-width:1300px; margin:20px auto; padding:0 16px; }
+    @media (max-width: 800px) {
+      .layout { display:block; }
+      nav { position:static; min-height:0; max-height:none; border-right:0; border-bottom:1px solid var(--line); }
+    }
     .card { background:var(--card); border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:16px; }
     .card h2 { margin:0 0 4px; font-size:1.05rem; }
     .card p { margin:0 0 12px; color:var(--muted); font-size:.9rem; }
@@ -72,7 +85,8 @@
     <h1>Indicadores de operación</h1>
     <div class="user"><span id="usuario"></span><a href="/.auth/logout">Cerrar sesión</a></div>
   </header>
-  <nav id="pestanas" role="tablist"></nav>
+  <div class="layout">
+  <nav id="menu" aria-label="Reportes"></nav>
   <main>
     <section class="card" id="panel-reporte">
       <h2 id="titulo"></h2>
@@ -137,59 +151,101 @@
       <div class="tabla-wrap"><table class="maestro" id="maestro-grilla"></table></div>
     </section>
   </main>
+  </div>
   <footer>Datos de prueba · se actualizan al republicar el reporte</footer>
 
   <script>
-    // Los dashboards (nombre y descripción) los entrega /api/dashboards sólo a usuarios con login.
+    // El menú lateral lo entrega /api/dashboards: los menús y reportes de Power BI que este usuario
+    // puede ver según la base portal_reportes (tablas menu, reporte y permisos por email de Entra ID).
     // El enlace no llega a la página: el iframe abre /api/reporte/<id>, que redirige a Power BI.
-    // Se configuran en la Static Web App → Variables de entorno → DASHBOARDS.
-    const nav = document.getElementById("pestanas");
+    const nav = document.getElementById("menu");
     const iframe = document.getElementById("reporte");
     const panelReporte = document.getElementById("panel-reporte");
     const panelCarga = document.getElementById("panel-carga");
     const panelMaestros = document.getElementById("panel-maestros");
-    let PESTANAS = [];
+    const HERRAMIENTAS = [
+      { clave: "carga", nombre: "Cargar archivos", tipo: "carga" },
+      { clave: "maestros", nombre: "Datos maestros", tipo: "maestros" },
+    ];
+    let VISTAS = {};  // "#r12" | "#carga" | "#maestros" -> { tipo, nombre, descripcion, id, boton, grupo }
 
-    function mostrar(i) {
-      const p = PESTANAS[i];
-      panelReporte.hidden = p.tipo !== "reporte";
-      panelCarga.hidden = p.tipo !== "carga";
-      panelMaestros.hidden = p.tipo !== "maestros";
-      if (p.tipo === "maestros") abrirMaestros();
-      if (p.tipo === "carga") cargarArchivos();
-      if (p.tipo === "reporte") {
-        document.getElementById("titulo").textContent = p.nombre;
-        document.getElementById("descripcion").textContent = p.descripcion;
-        iframe.src = Number.isInteger(p.id) ? "/api/reporte/" + p.id : "about:blank";
-        iframe.title = p.nombre;
+    function mostrar(clave) {
+      const v = VISTAS[clave];
+      if (!v) return;
+      panelReporte.hidden = v.tipo !== "reporte";
+      panelCarga.hidden = v.tipo !== "carga";
+      panelMaestros.hidden = v.tipo !== "maestros";
+      if (v.tipo === "maestros") abrirMaestros();
+      if (v.tipo === "carga") cargarArchivos();
+      if (v.tipo === "reporte") {
+        document.getElementById("titulo").textContent = v.nombre;
+        document.getElementById("descripcion").textContent = v.descripcion;
+        iframe.src = "/api/reporte/" + v.id;
+        iframe.title = v.nombre;
+        if (v.grupo) abrirGrupo(v.grupo, true);
       }
-      [...nav.children].forEach((b, j) => b.setAttribute("aria-selected", j === i));
-      history.replaceState(null, "", "#" + i);
+      Object.values(VISTAS).forEach(o => o.boton.setAttribute("aria-current", o === v));
+      history.replaceState(null, "", "#" + clave);
     }
 
-    function armarPestanas(dashboards) {
-      PESTANAS = [...dashboards.map(d => ({ ...d, tipo: "reporte" })), { nombre: "Cargar archivos", tipo: "carga" },
-                  { nombre: "Datos maestros", tipo: "maestros" }];
+    function abrirGrupo(boton, abierto) {
+      boton.setAttribute("aria-expanded", abierto);
+      boton.nextElementSibling.hidden = !abierto;
+    }
+
+    function item(clave, vista, clase) {
+      const b = document.createElement("button");
+      b.className = "item" + (clase ? " " + clase : "");
+      b.textContent = vista.nombre;
+      b.onclick = () => mostrar(clave);
+      VISTAS[clave] = { ...vista, boton: b };
+      return b;
+    }
+
+    function armarMenu(menus) {
+      VISTAS = {};
       nav.replaceChildren();
-      PESTANAS.forEach((p, i) => {
-        const b = document.createElement("button");
-        b.role = "tab";
-        b.textContent = p.nombre;
-        b.onclick = () => mostrar(i);
-        nav.appendChild(b);
+      let primera = null;
+      menus.forEach(m => {
+        const grupo = document.createElement("button");
+        grupo.className = "grupo";
+        grupo.textContent = m.nombre;
+        grupo.onclick = () => abrirGrupo(grupo, grupo.getAttribute("aria-expanded") !== "true");
+        const lista = document.createElement("ul");
+        m.reportes.forEach(r => {
+          const clave = "r" + r.id;
+          const li = document.createElement("li");
+          li.appendChild(item(clave, { tipo: "reporte", id: r.id, nombre: r.nombre, descripcion: r.descripcion, grupo }));
+          lista.appendChild(li);
+          primera = primera || clave;
+        });
+        nav.append(grupo, lista);
+        abrirGrupo(grupo, false);
       });
-      const inicial = parseInt(location.hash.slice(1), 10);
-      mostrar(Number.isInteger(inicial) && PESTANAS[inicial] ? inicial : 0);
+      if (!menus.length) {
+        const p = document.createElement("p");
+        p.className = "vacio";
+        p.textContent = "No tienes reportes asignados. Pide acceso al administrador.";
+        nav.appendChild(p);
+      }
+      const titulo = document.createElement("p");
+      titulo.className = "titulo-seccion";
+      titulo.textContent = "Herramientas";
+      nav.appendChild(titulo);
+      HERRAMIENTAS.forEach(h => nav.appendChild(item(h.clave, h, "herramienta")));
+
+      const pedida = location.hash.slice(1);
+      mostrar(VISTAS[pedida] ? pedida : (primera || "carga"));
     }
 
     fetch("/api/dashboards", { cache: "no-store" })
       .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.mensaje || r.status))))
-      .then(armarPestanas)
+      .then(armarMenu)
       .catch(err => {
-        armarPestanas([]);
+        armarMenu([]);
         const aviso = document.createElement("p");
         aviso.className = "resultado err";
-        aviso.textContent = "No se pudieron cargar los dashboards: " + err.message;
+        aviso.textContent = "No se pudo cargar el menú de reportes: " + err.message;
         panelCarga.prepend(aviso);
       });
 
