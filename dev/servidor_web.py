@@ -5,7 +5,7 @@
 Sirve ``web/app`` y ejecuta las mismas funciones de ``web/api`` que corren en Azure,
 sin modificarlas: arma el ``azure.functions.HttpRequest`` y devuelve su respuesta.
 Las variables que en Azure vienen de la Static Web App (BLOB_CONNECTION_STRING,
-DASHBOARDS...) se toman de ``config/entornos.toml`` según ENTORNO (o de las variables
+DB_...) se toman de ``config/entornos.toml`` según ENTORNO (o de las variables
 de entorno, que tienen prioridad).
 
 El login de Azure se simula: todo el que entra es ``DEV_USUARIO`` con el rol "empleado".

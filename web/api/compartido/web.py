@@ -33,7 +33,9 @@ def usuario(req: func.HttpRequest) -> str:
         return "desconocido"
 
 
-def conexion():
+def conexion(database: str | None = None):
+    """Conexión a MySQL; por defecto a DB_NAME (indicadores_bi)."""
+
     import pymysql
 
     host = os.environ["DB_HOST"]
@@ -47,8 +49,14 @@ def conexion():
 
         ssl = {"ca": certifi.where()}
     return pymysql.connect(host=host, port=int(os.getenv("DB_PORT", "3306")), user=os.environ["DB_USER"],
-                           password=os.environ["DB_PASSWORD"], database=os.getenv("DB_NAME", "indicadores_bi"),
+                           password=os.environ["DB_PASSWORD"], database=database or os.getenv("DB_NAME", "indicadores_bi"),
                            charset="utf8mb4", autocommit=False, connect_timeout=15, ssl=ssl)
+
+
+def conexion_portal():
+    """Conexión a la base del menú de Power BI (PORTAL_DB_NAME, por defecto portal_reportes)."""
+
+    return conexion(os.getenv("PORTAL_DB_NAME", "portal_reportes"))
 
 
 def contenedor():
