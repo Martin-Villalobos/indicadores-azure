@@ -116,6 +116,7 @@ App → **Administración de roles → Invitar**: proveedor Microsoft Entra ID, 
 El menú lateral de la web se arma solo desde la base `portal_reportes` (mismo servidor MySQL, esquema en `web/sql/portal_reportes.sql`): `menu` son los grupos laterales, `reporte` los Power BI de cada grupo (con su `url_powerbi`), y `usuario`, `rol`, `usuario_rol` y `permiso` dicen qué ve cada persona. Agregar un reporte o dar acceso es sólo un INSERT; no hay que volver a publicar la web.
 
 - El usuario se reconoce por el email con que inicia sesión en Entra ID (debe ser el mismo de `usuario.email`). Además tiene que tener el rol `empleado` en la Static Web App (ver arriba) para poder entrar.
+- `ancho_lienzo` y `alto_lienzo` de `reporte` son el tamaño del lienzo en Power BI (Formato → Configuración de lienzo; por defecto 1280 × 720). La web da al recuadro esa proporción: un reporte vertical (p. ej. 1280 × 2000, con Ver → **Ajustar al ancho**) se ve completo y se recorre con el scroll de la página. En una base creada antes de estas columnas, correr `web/sql/portal_reportes_02_lienzo.sql`.
 - Un permiso puede ser sobre un menú completo (`menu_id`, ve todos sus reportes, también los que se agreguen después) o sobre un reporte (`reporte_id`).
 - Quien no tiene permisos ve el menú vacío y sólo las herramientas (Cargar archivos, Datos maestros).
 - La API usa las mismas `DB_HOST`, `DB_USER` y `DB_PASSWORD` de Datos maestros; ese usuario necesita al menos `SELECT` sobre `portal_reportes.*`. `PORTAL_DB_NAME` cambia el nombre de la base (por defecto `portal_reportes`).
