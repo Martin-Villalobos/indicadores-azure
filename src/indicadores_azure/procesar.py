@@ -22,7 +22,7 @@ from urllib.parse import quote, unquote
 
 from .config import Config
 from .control import ErrorDeCarga, cargar_archivo
-from . import datos_iniciales
+from . import datos_iniciales, powerbi
 from .db import conexion
 from .migraciones import aplicar as aplicar_migraciones
 from .vigencias import completar_faltantes, eliminar_carga
@@ -244,7 +244,10 @@ def _procesar(config: Config) -> int:
             for tipo, carga_id in completadas:
                 encolar_por_carga(conn, tipo, carga_id)
             if completadas or avisos or encolados:
-                log.info("Recálculos ICFP: %s", procesar_pendientes(conn))
+                calculos = procesar_pendientes(conn)
+                log.info("Recálculos ICFP: %s", calculos)
+                if calculos:
+                    powerbi.actualizar_modelos()  # el dashboard toma los datos nuevos
             for aviso in avisos:
                 contenedor.delete_blob(aviso)
         except Exception:
