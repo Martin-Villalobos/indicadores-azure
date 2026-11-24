@@ -144,6 +144,28 @@ La página recorta la barra inferior de Power BI (compartir, pantalla completa, 
 
 La variable `DASHBOARDS` de la Static Web App ya no se usa y se puede borrar.
 
+## Actualizar Power BI después de cada recálculo
+
+Cuando el job recalcula el ICFP (por un archivo nuevo, un cambio de vigencias o de datos maestros), pide a Power BI que actualice los modelos semánticos (`src/indicadores_azure/powerbi.py`). Sin las variables `POWERBI_*` no hace nada y el dashboard se queda con la actualización programada. Si la petición falla, queda en el log del job y no afecta la carga.
+
+Preparación (una vez):
+
+1. **Área de trabajo compartida.** La API no llega a "Mi área de trabajo". Crear un área (p. ej. `Indicadores`), publicar ahí el .pbix desde Desktop y volver a asignar la conexión del gateway en el modelo. "Publicar en la web" genera un enlace nuevo: actualizar `reporte.url_powerbi` en `portal_reportes`.
+2. **App en Entra ID.** Portal de Azure → **Microsoft Entra ID → Registros de aplicaciones → Nuevo registro** (`powerbi-indicadores`), sin permisos de API. En **Certificados y secretos**, crear un secreto. Anotar el id de directorio (tenant), el id de la aplicación y el secreto.
+3. **Permitir entidades de servicio.** app.powerbi.com → ⚙ → **Portal de administración → Configuración del inquilino → Las entidades de servicio pueden usar las API de Fabric** (o "de Power BI"): activar, idealmente sólo para un grupo de seguridad que contenga la app. Requiere ser administrador de Power BI.
+4. **Acceso al área.** En el área de trabajo → **Administrar acceso → Agregar** la app como **Colaborador**.
+5. **Ids.** En la URL del modelo semántico en app.powerbi.com: `.../groups/<POWERBI_WORKSPACE_ID>/datasets/<id del modelo>/details`.
+6. **Variables del job** (Cloud Shell):
+
+```
+az containerapp job secret set -g rg-prueba-indicadores -n job-cargas --secrets powerbi-secreto='SECRETO'
+az containerapp job update -g rg-prueba-indicadores -n job-cargas --set-env-vars \
+  POWERBI_TENANT_ID=... POWERBI_CLIENT_ID=... POWERBI_CLIENT_SECRET=secretref:powerbi-secreto \
+  POWERBI_WORKSPACE_ID=... POWERBI_DATASET_IDS=id1,id2
+```
+
+Con licencia Pro, Power BI acepta 8 actualizaciones al día por modelo, sumando las programadas y las del job. Si se pasa del límite, el log del job muestra "Power BI: el modelo ... respondió 400" y el dashboard se actualiza en la siguiente programada. "Publicar en la web" puede tardar hasta una hora más en mostrar los datos nuevos por su caché.
+
 ## Dominio propio (pendiente)
 
 DNS de `granamericassantiago.cl` en GoDaddy. App → **Dominios personalizados → + Agregar** `indicadores.granamericassantiago.cl`; en GoDaddy, registro **CNAME** `indicadores` → `witty-stone-0193e8a0f.8.azurestaticapps.net`, TTL 1 hora; luego **Validar** en Azure.
