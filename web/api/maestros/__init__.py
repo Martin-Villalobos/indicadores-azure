@@ -17,10 +17,16 @@ import base64
 import json
 import logging
 import os
+import sys
 from datetime import date, datetime
+from pathlib import Path
 from decimal import Decimal
 
 import azure.functions as func
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # web/api, para "compartido"
+
+from compartido import web  # noqa: E402
 
 # tabla -> columnas (nombre, tipo, es_clave, titulo). Sólo estas tablas se pueden editar.
 TABLAS = {
@@ -174,6 +180,9 @@ def _guardar(cur, tabla: str, fila: dict, usuario: str, accion: str) -> None:
 
 
 def _main(req: func.HttpRequest) -> func.HttpResponse:
+    denegado = web.exigir(req, "maestros")
+    if denegado:
+        return denegado
     tabla = req.params.get("tabla")
     if not tabla:
         return _respuesta([{"tabla": k, "nombre": v["nombre"], "descripcion": v["descripcion"],

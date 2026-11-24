@@ -118,8 +118,10 @@ El menú lateral de la web se arma solo desde la base `portal_reportes` (mismo s
 - El usuario se reconoce por el email con que inicia sesión en Entra ID (debe ser el mismo de `usuario.email`). Además tiene que tener el rol `empleado` en la Static Web App (ver arriba) para poder entrar.
 - `ancho_lienzo` y `alto_lienzo` de `reporte` son el tamaño del lienzo en Power BI (Formato → Configuración de lienzo; por defecto 1280 × 720). La web da al recuadro esa proporción: un reporte vertical (p. ej. 1280 × 2000, con Ver → **Ajustar al ancho**) se ve completo y se recorre con el scroll de la página. En una base creada antes de estas columnas, correr `web/sql/portal_reportes_02_lienzo.sql`.
 - Un permiso puede ser sobre un menú completo (`menu_id`, ve todos sus reportes, también los que se agreguen después) o sobre un reporte (`reporte_id`).
-- Quien no tiene permisos ve el menú vacío y sólo las herramientas (Cargar archivos, Datos maestros).
-- La API usa las mismas `DB_HOST`, `DB_USER` y `DB_PASSWORD` de Datos maestros; ese usuario necesita al menos `SELECT` sobre `portal_reportes.*`. `PORTAL_DB_NAME` cambia el nombre de la base (por defecto `portal_reportes`).
+- Las herramientas también van por rol: `rol.puede_cargar` muestra **Cargar archivos**, `rol.puede_maestros` muestra **Datos maestros**, y `rol.es_admin` da todo, además de **Usuarios**. Quien no tiene ninguno no ve la sección Herramientas, y las API (`/api/cargar`, `/api/estado`, `/api/archivos`, `/api/maestros`) responden 403 aunque las llame directo. En una base creada antes de estas columnas, correr `web/sql/portal_reportes_03_herramientas.sql` (deja a los administradores con todo).
+- **Usuarios** (sólo administradores) es el mantenedor: agregar, editar, desactivar o eliminar usuarios con sus roles, y crear roles con sus herramientas y los menús que ven. Los permisos por reporte puntual se siguen editando en la base. Nadie puede quitarse a sí mismo el acceso de administrador.
+- Quien no tiene permisos ni herramientas ve un aviso para pedir acceso.
+- La API usa las mismas `DB_HOST`, `DB_USER` y `DB_PASSWORD` de Datos maestros; ese usuario necesita `SELECT, INSERT, UPDATE, DELETE` sobre `portal_reportes.*` (el mantenedor y `ultimo_acceso` escriben ahí). `PORTAL_DB_NAME` cambia el nombre de la base (por defecto `portal_reportes`).
 
 Ejemplo, un grupo con un reporte visible para un administrador:
 
@@ -129,7 +131,7 @@ INSERT INTO menu (nombre, orden) VALUES ('Indicadores Operacionales', 1);
 SET @menu = LAST_INSERT_ID();
 INSERT INTO reporte (menu_id, nombre, descripcion, url_powerbi, orden)
 VALUES (@menu, 'ICFP', 'Índice de Cumplimiento de Frecuencia y Plazas.', 'https://app.powerbi.com/view?r=...', 1);
-INSERT INTO rol (nombre, es_admin) VALUES ('Administrador', 1);
+INSERT INTO rol (nombre, es_admin, puede_cargar, puede_maestros) VALUES ('Administrador', 1, 1, 1);
 SET @rol = LAST_INSERT_ID();
 INSERT INTO usuario (email, nombre) VALUES ('correo@empresa.cl', 'Nombre');
 INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (LAST_INSERT_ID(), @rol);

@@ -10,9 +10,15 @@ import json
 import logging
 import os
 import re
+import sys
+from pathlib import Path
 from urllib.parse import unquote
 
 import azure.functions as func
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # web/api, para "compartido"
+
+from compartido import web  # noqa: E402
 
 
 PATRON = re.compile(r"^(?P<tipo>[a-z0-9_]+)/entrada/(?P<nombre>[^/]+)$")
@@ -23,6 +29,9 @@ def _respuesta(datos: dict, status: int = 200) -> func.HttpResponse:
 
 
 def _main(req: func.HttpRequest) -> func.HttpResponse:
+    denegado = web.exigir(req, "cargar")
+    if denegado:
+        return denegado
     from azure.core.exceptions import ResourceNotFoundError
     from azure.storage.blob import BlobServiceClient
 
