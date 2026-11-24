@@ -13,6 +13,12 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 
+@pytest.fixture(autouse=True)
+def _con_permiso(monkeypatch):
+    """Los permisos por rol se prueban en test_web_usuarios.py."""
+    monkeypatch.setattr(m.web, "exigir", lambda req, herramienta: None)
+
+
 def _get(params):
     return m.main(func.HttpRequest(method="GET", url="http://x/api/maestros", headers={}, params=params, body=b""))
 

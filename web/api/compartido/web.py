@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 from datetime import date, datetime
 from decimal import Decimal
@@ -57,6 +58,29 @@ def conexion_portal():
     """Conexión a la base del menú de Power BI (PORTAL_DB_NAME, por defecto portal_reportes)."""
 
     return conexion(os.getenv("PORTAL_DB_NAME", "portal_reportes"))
+
+
+def exigir(req: func.HttpRequest, herramienta: str) -> func.HttpResponse | None:
+    """None si el usuario puede usar la herramienta ("cargar", "maestros" o "admin"); si no, la respuesta 403.
+
+    Los permisos salen de los roles del usuario en portal_reportes (rol.es_admin, puede_cargar,
+    puede_maestros). La página esconde lo que el usuario no puede usar; esto lo hace cumplir en la API.
+    """
+
+    from . import portal
+
+    try:
+        conn = conexion_portal()
+        try:
+            permitido = portal.permisos(conn, usuario(req)).get(herramienta, False)
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001
+        logging.exception("No se pudieron leer los permisos de portal_reportes")
+        return respuesta({"estado": "ERROR", "mensaje": "No se pudieron leer tus permisos."}, 500)
+    if permitido:
+        return None
+    return respuesta({"estado": "ERROR", "mensaje": "No tienes permiso para esta sección. Pide acceso al administrador."}, 403)
 
 
 def contenedor():

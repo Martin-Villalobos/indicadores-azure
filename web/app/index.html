@@ -80,6 +80,13 @@
     table.maestro tr.nuevo-archivo td { border-top:2px solid var(--line); }
     .chip { display:inline-block; font-size:.75rem; padding:1px 6px; border-radius:10px; background:#fff3c4; color:#7a5b00; margin-left:4px; }
     .chip.gris { background:#eef1f4; color:var(--muted); }
+    .checks { display:flex; flex-wrap:wrap; gap:4px 12px; white-space:normal; }
+    .checks label { display:inline-flex; align-items:center; gap:4px; font-weight:400; font-size:.88rem; }
+    table.maestro td.checks-celda { white-space:normal; min-width:200px; }
+    table.maestro td input[type=checkbox] { width:auto; min-width:0; }
+    .maestro-form .checks { flex-basis:100%; }
+    .maestro-form .checks input { min-width:0; }
+    .maestro-form .checks::before { content:"Roles:"; font-weight:600; font-size:.9rem; }
     footer { text-align:center; color:var(--muted); font-size:.8rem; margin:24px 0; }
   </style>
 </head>
@@ -153,6 +160,42 @@
       <div id="maestro-aviso" class="resultado" hidden></div>
       <div class="tabla-wrap"><table class="maestro" id="maestro-grilla"></table></div>
     </section>
+
+    <section class="card" id="panel-usuarios" hidden>
+      <h2>Usuarios</h2>
+      <p>Quién puede entrar y con qué roles. El email tiene que ser el de la cuenta de Microsoft con que la persona
+        inicia sesión. Para entrar además necesita la invitación con el rol <code>empleado</code> de la Static Web App
+        (Azure → Static Web App → Administración de roles).</p>
+      <div id="usr-aviso" class="resultado" hidden></div>
+      <form id="usr-form" class="maestro-form">
+        <h3>Agregar usuario</h3>
+        <label>Email <input type="email" name="email" required placeholder="nombre@empresa.cl"></label>
+        <label>Nombre <input type="text" name="nombre" placeholder="Opcional"></label>
+        <div class="checks" id="usr-form-roles"></div>
+        <button class="boton" type="submit">Agregar</button>
+      </form>
+      <div class="maestros-barra">
+        <input type="search" id="usr-filtro" placeholder="Buscar por email o nombre…">
+        <span id="usr-cuenta" class="meta"></span>
+      </div>
+      <div class="tabla-wrap"><table class="maestro" id="usr-tabla"></table></div>
+
+      <hr class="separador">
+      <h2>Roles</h2>
+      <p>Qué puede hacer cada rol: qué menús de reportes ve y qué herramientas usa. Un administrador puede todo,
+        incluida esta página. Una persona con varios roles suma lo de todos.</p>
+      <form id="rol-form" class="maestro-form">
+        <h3>Agregar rol</h3>
+        <label>Nombre <input type="text" name="nombre" required placeholder="Ej.: Operaciones"></label>
+        <button class="boton" type="submit">Agregar</button>
+      </form>
+      <div class="tabla-wrap"><table class="maestro" id="rol-tabla"></table></div>
+    </section>
+
+    <section class="card" id="panel-vacio" hidden>
+      <h2>Sin acceso asignado</h2>
+      <p>Tu usuario no tiene reportes ni herramientas asignados. Pide acceso al administrador.</p>
+    </section>
   </main>
   </div>
   <footer>Datos de prueba · se actualizan al republicar el reporte</footer>
@@ -166,10 +209,16 @@
     const panelReporte = document.getElementById("panel-reporte");
     const panelCarga = document.getElementById("panel-carga");
     const panelMaestros = document.getElementById("panel-maestros");
+    const panelUsuarios = document.getElementById("panel-usuarios");
+    const panelVacio = document.getElementById("panel-vacio");
+    // Cada herramienta se muestra sólo si /api/yo dice que el usuario la puede usar (según sus roles);
+    // las API vuelven a revisar el permiso.
     const HERRAMIENTAS = [
-      { clave: "carga", nombre: "Cargar archivos", tipo: "carga" },
-      { clave: "maestros", nombre: "Datos maestros", tipo: "maestros" },
+      { clave: "carga", nombre: "Cargar archivos", tipo: "carga", permiso: "cargar" },
+      { clave: "maestros", nombre: "Datos maestros", tipo: "maestros", permiso: "maestros" },
+      { clave: "usuarios", nombre: "Usuarios", tipo: "usuarios", permiso: "admin" },
     ];
+    let PERMISOS = {};
     let VISTAS = {};  // "#r12" | "#carga" | "#maestros" -> { tipo, nombre, descripcion, id, boton, grupo }
 
     function mostrar(clave) {
@@ -178,8 +227,11 @@
       panelReporte.hidden = v.tipo !== "reporte";
       panelCarga.hidden = v.tipo !== "carga";
       panelMaestros.hidden = v.tipo !== "maestros";
+      panelUsuarios.hidden = v.tipo !== "usuarios";
+      panelVacio.hidden = true;
       if (v.tipo === "maestros") abrirMaestros();
       if (v.tipo === "carga") cargarArchivos();
+      if (v.tipo === "usuarios") cargarUsuarios();
       if (v.tipo === "reporte") {
         document.getElementById("titulo").textContent = v.nombre;
         document.getElementById("descripcion").textContent = v.descripcion;
@@ -234,26 +286,42 @@
         p.textContent = "No tienes reportes asignados. Pide acceso al administrador.";
         nav.appendChild(p);
       }
-      const titulo = document.createElement("p");
-      titulo.className = "titulo-seccion";
-      titulo.textContent = "Herramientas";
-      nav.appendChild(titulo);
-      HERRAMIENTAS.forEach(h => nav.appendChild(item(h.clave, h, "herramienta")));
+      const permitidas = HERRAMIENTAS.filter(h => PERMISOS[h.permiso]);
+      if (permitidas.length) {
+        const titulo = document.createElement("p");
+        titulo.className = "titulo-seccion";
+        titulo.textContent = "Herramientas";
+        nav.appendChild(titulo);
+        permitidas.forEach(h => nav.appendChild(item(h.clave, h, "herramienta")));
+      }
 
       const pedida = location.hash.slice(1);
-      mostrar(VISTAS[pedida] ? pedida : (primera || "carga"));
+      const inicial = VISTAS[pedida] ? pedida : (primera || (permitidas[0] && permitidas[0].clave));
+      if (inicial) {
+        mostrar(inicial);
+      } else {
+        [panelReporte, panelCarga, panelMaestros, panelUsuarios].forEach(p => p.hidden = true);
+        panelVacio.hidden = false;
+      }
+      return { menus, permitidas };
     }
 
-    fetch("/api/dashboards", { cache: "no-store" })
-      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.mensaje || r.status))))
-      .then(armarMenu)
-      .catch(err => {
-        armarMenu([]);
+    function pedirJson(url) {
+      return fetch(url, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : r.json().catch(() => ({})).then(e => Promise.reject(new Error(e.mensaje || r.status))));
+    }
+
+    Promise.allSettled([pedirJson("/api/dashboards"), pedirJson("/api/yo")]).then(([menus, yo]) => {
+      PERMISOS = yo.status === "fulfilled" ? yo.value : {};
+      armarMenu(menus.status === "fulfilled" ? menus.value : []);
+      const errores = [menus, yo].filter(x => x.status === "rejected").map(x => x.reason.message);
+      if (errores.length) {
         const aviso = document.createElement("p");
         aviso.className = "resultado err";
-        aviso.textContent = "No se pudo cargar el menú de reportes: " + err.message;
-        panelCarga.prepend(aviso);
-      });
+        aviso.textContent = "No se pudo cargar el menú o tus permisos: " + errores.join(" · ");
+        document.querySelector("main").prepend(aviso);
+      }
+    });
 
     // El clic derecho sobre la página no ofrece "abrir marco en otra pestaña".
     document.addEventListener("contextmenu", e => e.preventDefault());
@@ -752,6 +820,128 @@
         }
       }));
     };
+
+    // ----- Usuarios y roles (sólo administradores) -----
+    const usrAviso = document.getElementById("usr-aviso");
+    const usrTabla = document.getElementById("usr-tabla");
+    const usrFiltro = document.getElementById("usr-filtro");
+    const rolTabla = document.getElementById("rol-tabla");
+    let ADMIN = { usuarios: [], roles: [], menus: [] };
+
+    function avisoU(texto, ok) {
+      usrAviso.hidden = !texto;
+      usrAviso.className = "resultado " + (ok ? "ok" : "err");
+      usrAviso.textContent = texto || "";
+    }
+
+    function nodo(tag, props, ...hijos) {
+      const e = document.createElement(tag);
+      Object.assign(e, props || {});
+      hijos.forEach(h => e.append(h));
+      return e;
+    }
+
+    // Casillas "nombre" con value = id; marcadas las de "elegidos".
+    function casillas(opciones, elegidos, nombre) {
+      const caja = nodo("div", { className: "checks" });
+      opciones.forEach(o => {
+        const c = nodo("input", { type: "checkbox", value: o.id, checked: elegidos.includes(o.id), name: nombre });
+        caja.append(nodo("label", {}, c, o.nombre + (o.activo === false ? " (inactivo)" : "")));
+      });
+      if (!opciones.length) caja.append(nodo("span", { className: "meta", textContent: "(no hay)" }));
+      return caja;
+    }
+    const marcados = (raiz, nombre) => [...raiz.querySelectorAll(`input[name="${nombre}"]:checked`)].map(c => +c.value);
+
+    async function cargarUsuarios() {
+      const d = await leerJson(await fetch("/api/usuarios", { cache: "no-store" }));
+      if (!d.usuarios) { avisoU("✗ " + (d.mensaje || "No se pudo leer la lista de usuarios."), false); return; }
+      ADMIN = d;
+      const formRoles = document.getElementById("usr-form-roles");
+      formRoles.replaceWith(Object.assign(casillas(ADMIN.roles, [], "rol"), { id: "usr-form-roles" }));
+      dibujarUsuarios();
+      dibujarRoles();
+    }
+
+    async function postUsuarios(cuerpo) {
+      const d = await leerJson(await fetch("/api/usuarios", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }));
+      if (d.estado === "OK") { await cargarUsuarios(); avisoU("✓ " + d.mensaje, true); }
+      else avisoU("✗ " + (d.mensaje || "Error desconocido."), false);
+      return d.estado === "OK";
+    }
+
+    function dibujarUsuarios() {
+      const q = usrFiltro.value.trim().toLowerCase();
+      const lista = ADMIN.usuarios.filter(u => !q || (u.email + " " + u.nombre).toLowerCase().includes(q));
+      document.getElementById("usr-cuenta").textContent = `${lista.length} de ${ADMIN.usuarios.length}`;
+      const cab = nodo("tr", {}, ...["Email", "Nombre", "Roles", "Activo", "Último acceso", ""].map(t => nodo("th", { textContent: t })));
+      usrTabla.replaceChildren(nodo("thead", {}, cab), nodo("tbody", {}, ...lista.map(filaUsuario)));
+    }
+
+    function filaUsuario(u) {
+      const email = nodo("input", { value: u.email, type: "email" });
+      const nombre = nodo("input", { value: u.nombre });
+      const roles = casillas(ADMIN.roles, u.roles, "rol");
+      const activo = nodo("input", { type: "checkbox", checked: u.activo });
+      const tr = nodo("tr", {});
+      tr.addEventListener("input", () => tr.classList.add("cambiada"));
+      tr.addEventListener("change", () => tr.classList.add("cambiada"));
+      const guardar = nodo("button", { textContent: "Guardar", type: "button" });
+      guardar.onclick = () => postUsuarios({ accion: "guardar_usuario", usuario: {
+        id: u.id, email: email.value, nombre: nombre.value, activo: activo.checked, roles: marcados(roles, "rol") } });
+      const borrar = nodo("button", { textContent: "Eliminar", type: "button", className: "borrar" });
+      borrar.onclick = () => { if (confirm(`¿Eliminar a ${u.email}? Dejará de poder entrar a la web.`))
+        postUsuarios({ accion: "borrar_usuario", id: u.id }); };
+      const acceso = u.ultimo_acceso ? u.ultimo_acceso.slice(0, 16) : "nunca";
+      tr.append(nodo("td", {}, email), nodo("td", {}, nombre), nodo("td", { className: "checks-celda" }, roles),
+                nodo("td", {}, activo), nodo("td", { className: "meta", textContent: acceso }),
+                nodo("td", { className: "acciones" }, guardar, borrar));
+      return tr;
+    }
+
+    function dibujarRoles() {
+      const cab = nodo("tr", {}, ...["Rol", "Administrador", "Cargar archivos", "Datos maestros", "Menús de reportes que ve",
+                                   "Usuarios", ""].map(t => nodo("th", { textContent: t })));
+      rolTabla.replaceChildren(nodo("thead", {}, cab), nodo("tbody", {}, ...ADMIN.roles.map(filaRol)));
+    }
+
+    function filaRol(r) {
+      const nombre = nodo("input", { value: r.nombre });
+      const caja = v => nodo("input", { type: "checkbox", checked: v });
+      const admin = caja(r.es_admin), cargar = caja(r.puede_cargar), maestros = caja(r.puede_maestros);
+      const menus = casillas(ADMIN.menus, r.menus, "menu");
+      if (r.reportes_sueltos) menus.append(nodo("span", { className: "chip gris",
+        textContent: `+ ${r.reportes_sueltos} reporte(s) sueltos`, title: "Permisos por reporte puntual (se editan en la base)" }));
+      const tr = nodo("tr", {});
+      tr.addEventListener("change", () => tr.classList.add("cambiada"));
+      tr.addEventListener("input", () => tr.classList.add("cambiada"));
+      const guardar = nodo("button", { textContent: "Guardar", type: "button" });
+      guardar.onclick = () => postUsuarios({ accion: "guardar_rol", rol: {
+        id: r.id, nombre: nombre.value, es_admin: admin.checked, puede_cargar: cargar.checked,
+        puede_maestros: maestros.checked, menus: marcados(menus, "menu") } });
+      const borrar = nodo("button", { textContent: "Eliminar", type: "button", className: "borrar" });
+      borrar.onclick = () => { if (confirm(`¿Eliminar el rol ${r.nombre}?`)) postUsuarios({ accion: "borrar_rol", id: r.id }); };
+      tr.append(nodo("td", {}, nombre), nodo("td", {}, admin), nodo("td", {}, cargar), nodo("td", {}, maestros),
+                nodo("td", { className: "checks-celda" }, menus), nodo("td", { className: "meta", textContent: r.usuarios }),
+                nodo("td", { className: "acciones" }, guardar, borrar));
+      return tr;
+    }
+
+    usrFiltro.addEventListener("input", dibujarUsuarios);
+    document.getElementById("usr-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = e.target;
+      const ok = await postUsuarios({ accion: "guardar_usuario", usuario: {
+        email: f.email.value, nombre: f.nombre.value, activo: true, roles: marcados(f, "rol") } });
+      if (ok) f.reset();
+    });
+    document.getElementById("rol-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = e.target;
+      const ok = await postUsuarios({ accion: "guardar_rol", rol: { nombre: f.nombre.value } });
+      if (ok) f.reset();
+    });
   </script>
 </body>
 </html>

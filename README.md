@@ -22,7 +22,7 @@ Hay un solo lector de archivos, el job. La web y la máquina local sólo suben.
 | `sql/` | Tablas que necesita el job. Se aplican solas: el job corre los archivos pendientes al partir (`migracion_aplicada`) |
 | `datos_iniciales/` | Anexos y otros archivos que el job carga solo en una base nueva (ver su README) |
 | `docker/` | Imagen del job |
-| `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` arma el menú de reportes desde la base `portal_reportes` y `/api/reporte/<id>` abre uno) y `sql/portal_reportes.sql` (esquema de esa base, se aplica a mano) |
+| `web/` | Static Web App: `app/` (página) y `api/` (`/api/cargar` sube, `/api/estado` dice en qué quedó, `/api/dashboards` arma el menú de reportes desde la base `portal_reportes` y `/api/reporte/<id>` abre uno, `/api/yo` dice qué herramientas ve el usuario según su rol y `/api/usuarios` es el mantenedor de usuarios y roles) y `sql/portal_reportes.sql` (esquema de esa base, se aplica a mano) |
 | `local/` | Script rclone que envía Reporte 1.117 y Velocidades desde el espejo FTP de la máquina local |
 | `infra/` | Script que crea almacenamiento, cola, Event Grid, registro y job |
 | `docs/DESPLIEGUE.md` | Paso a paso del despliegue |

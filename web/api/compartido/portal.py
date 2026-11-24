@@ -45,3 +45,28 @@ def url_reporte(conn, email: str, reporte_id: int) -> str | None:
         cur.execute("SELECT r.url_powerbi" + _VISIBLES + "AND r.id = %s LIMIT 1", (email, reporte_id))
         fila = cur.fetchone()
     return fila[0] if fila else None
+
+
+def permisos_cursor(cur, email: str) -> dict:
+    """Qué herramientas de la web puede usar el usuario, según sus roles.
+
+    {"admin": bool, "cargar": bool, "maestros": bool}. Un rol administrador puede todo.
+    Un usuario inactivo o que no está en la tabla no puede nada.
+    """
+
+    cur.execute(
+        """SELECT COALESCE(MAX(ro.es_admin), 0), COALESCE(MAX(ro.puede_cargar), 0), COALESCE(MAX(ro.puede_maestros), 0)
+           FROM usuario u
+           JOIN usuario_rol ur ON ur.usuario_id = u.id
+           JOIN rol ro         ON ro.id = ur.rol_id
+           WHERE u.email = %s AND u.activo = 1""",
+        (email,),
+    )
+    admin, cargar, maestros = cur.fetchone() or (0, 0, 0)
+    admin = bool(admin)
+    return {"admin": admin, "cargar": admin or bool(cargar), "maestros": admin or bool(maestros)}
+
+
+def permisos(conn, email: str) -> dict:
+    with conn.cursor() as cur:
+        return permisos_cursor(cur, email)
