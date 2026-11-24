@@ -43,7 +43,9 @@ CREATE TABLE usuario (
 CREATE TABLE rol (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   nombre          VARCHAR(100) NOT NULL UNIQUE,
-  es_admin        TINYINT(1) NOT NULL DEFAULT 0   -- puede gestionar menús, reportes y permisos
+  es_admin        TINYINT(1) NOT NULL DEFAULT 0,  -- puede todo, incluido el mantenedor de usuarios y roles
+  puede_cargar    TINYINT(1) NOT NULL DEFAULT 0,  -- ve "Cargar archivos" (subir, eliminar, cambiar fechas)
+  puede_maestros  TINYINT(1) NOT NULL DEFAULT 0   -- ve "Datos maestros"
 );
 
 CREATE TABLE usuario_rol (

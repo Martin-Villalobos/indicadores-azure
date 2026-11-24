@@ -14,6 +14,12 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 
+@pytest.fixture(autouse=True)
+def _con_permiso(monkeypatch):
+    """Los permisos por rol se prueban en test_web_usuarios.py."""
+    monkeypatch.setattr(m.web, "exigir", lambda req, herramienta: None)
+
+
 def test_copia_de_vigencias_en_la_web_es_identica():
     original = (RAIZ / "src" / "indicadores_azure" / "vigencias.py").read_text(encoding="utf-8")
     copia = (RAIZ / "web" / "api" / "compartido" / "vigencias.py").read_text(encoding="utf-8")

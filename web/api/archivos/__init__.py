@@ -132,6 +132,9 @@ def _accion(conn, cuerpo: dict, usuario: str) -> func.HttpResponse:
 
 
 def _main(req: func.HttpRequest) -> func.HttpResponse:
+    denegado = web.exigir(req, "cargar")
+    if denegado:
+        return denegado
     if req.method == "GET":
         tipo = req.params.get("tipo")
         descargar = req.params.get("descargar")

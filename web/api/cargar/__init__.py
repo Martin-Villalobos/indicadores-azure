@@ -12,11 +12,16 @@ import json
 import logging
 import os
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
 import azure.functions as func
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # web/api, para "compartido"
+
+from compartido import web  # noqa: E402
 
 
 # Tipos que se pueden subir desde la web (deben existir en src/indicadores_azure/lectores).
@@ -66,6 +71,9 @@ def _respuesta(datos: dict, status: int) -> func.HttpResponse:
 
 
 def _main(req: func.HttpRequest) -> func.HttpResponse:
+    denegado = web.exigir(req, "cargar")
+    if denegado:
+        return denegado
     tipo = (req.params.get("tipo") or "").lower()
     if tipo not in TIPOS:
         return _respuesta({"estado": "ERROR", "mensaje": f"Tipo no soportado: {tipo or '(vacío)'}"}, 400)
