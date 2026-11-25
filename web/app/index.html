@@ -115,10 +115,11 @@
             <option value="velocidades">Velocidades DTPM (diario)</option>
             <option value="exclusiones">Exclusiones DTPM – eventos exógenos (mensual)</option>
             <option value="flota">Flota – patente, tipo de bus y plazas (.csv o .xlsx)</option>
+            <option value="transacciones">Transacciones Sonda – TRX_ACUM_DIA (.zip diario)</option>
           </select>
         </label>
-        <label>Archivo (.xlsx o .csv)
-          <input type="file" id="archivo" accept=".xlsx,.csv" required>
+        <label>Archivo (.xlsx, .csv o .zip)
+          <input type="file" id="archivo" accept=".xlsx,.csv,.zip,.txt" required>
         </label>
         <button class="boton" id="btn-cargar" type="submit">Subir y cargar</button>
       </form>

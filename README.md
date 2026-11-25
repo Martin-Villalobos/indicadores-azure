@@ -59,6 +59,14 @@ Cuando el job completa una carga de Anexo 3, velocidades, exclusiones o flota, e
 
 Cada corrida es un `calculo` nuevo; `v_icfp_dashboard` muestra el último por fecha y `v_icfp_mes` el ICFP y los km con derecho a pago del mes. A mano: `indicadores-azure-icfp --desde 2026-02-01 --hasta 2026-02-28` o `indicadores-azure-icfp --pendientes`.
 
+## Transacciones
+
+El tipo `transacciones` carga los `TRX_ACUM_DIA*.zip` diarios de Sonda (sólo el `.txt` LVAT de adentro) en `raw_transacciones`, una fila por validación. El archivo se rechaza si alguna fila no es de la U16 o si las filas no calzan con "Cantidad TRX" del pie. No tienen vigencia: cada archivo trae lo liquidado ese día (incluidas validaciones atrasadas) y se suman.
+
+- `v_transacciones`: las filas de cargas COMPLETADO con `nombre_servicio` y `codigo_ts_servicio` (por el CL, desde `dim_codigo_linea`) y `tipo_dia` (del archivo de velocidades vigente). En zona paga (`sitio` RM-xxxx, `es_zona_paga = 1`) el servicio queda NULL.
+- `v_transacciones_mes`: q del mes por fecha de validación, sin el Ajuste ZPM. Más el Ajuste ZPM de la liquidación da los "TRX totales" de la carta de pago (cuadró exacto en marzo 2026 y a 84 en abril).
+- `transacciones_bus_sin_servicio` cuenta las validaciones en bus con un CL que no está en `dim_codigo_linea`: si no es 0, falta agregar esa línea en `sql/15_transacciones.sql`.
+
 ## Agregar un tipo de archivo
 
 1. Crear `src/indicadores_azure/lectores/<tipo>.py` con `TABLA`, `COLUMNAS`, `EXTENSIONES`, `VIGENCIA` (columnas con el rango de fechas que cubre el archivo) y `leer(contenido) -> filas`. Los errores para el usuario se lanzan con `ErrorDeCarga` diciendo hoja, fila y columna.

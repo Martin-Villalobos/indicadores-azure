@@ -70,13 +70,14 @@ En la web, pestaña **Cargar archivos**, subir un Anexo 1. En menos de un minuto
 
 Subir el mismo archivo otra vez responde "ya se había cargado" sin duplicar filas. Un archivo con error no deja filas a medias.
 
-## 5. Máquina local (Linux): Reporte 1.117 y Velocidades con rclone
+## 5. Máquina local (Linux): Reporte 1.117, Transacciones y Velocidades con rclone
 
 > Los lectores de `reporte117` y `velocidades` todavía no están en el job. Mientras tanto los archivos llegan a `<tipo>/entrada/` y esperan ahí.
 
 La máquina ya tiene el espejo FTP (`syndirectory.sh` con lftp en `/data/ftpmirror/...`). `local/subir_archivos.sh` toma de ese espejo lo nuevo y lo copia al blob, con la misma lógica que `copyToServer.sh`:
 
 - Reporte 1.117: los `.zip` de `/data/ftpmirror/sonda/OUT/Reporte_1.117`.
+- Transacciones: los `TRX_ACUM_DIA*.zip` de `/data/ftpmirror/sonda/OUT/Transacciones` (tipo `transacciones`).
 - Velocidades: los `.xlsx` fuera de línea (`*OFF*`) y los en línea (`*ON*`) que todavía no tienen su versión fuera de línea.
 - No mueve ni borra nada del espejo (lftp los volvería a bajar). Lo ya subido queda anotado en `~/.subir_azure/*.subidos`.
 - Sólo considera archivos modificados desde `DESDE` (por defecto 2026-11-01) y con más de 2 minutos sin cambios.

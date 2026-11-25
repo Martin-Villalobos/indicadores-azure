@@ -31,6 +31,7 @@ TIPOS = {
     "velocidades": {".xlsx"},
     "exclusiones": {".xlsx"},
     "flota": {".csv", ".xlsx"},
+    "transacciones": {".zip", ".txt"},
 }
 TAMANO_MAXIMO = 50 * 1024 * 1024
 

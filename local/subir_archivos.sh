@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Envía Reporte 1.117 y Velocidades desde el espejo FTP local al blob "cargas" de Azure.
+# Envía Reporte 1.117, Transacciones y Velocidades desde el espejo FTP local al blob "cargas" de Azure.
 # Sigue la misma lógica que copyToServer.sh: los archivos del espejo NO se mueven ni
 # se borran (lftp los volvería a bajar); se anota en un registro local qué ya se subió.
 #
@@ -60,6 +60,10 @@ log "Inicio"
 # --- Reporte 1.117: zips ---
 candidatos "$ESPEJO_SONDA/Reporte_1.117" -name '*.zip' \
   | subir r117 "$ESPEJO_SONDA/Reporte_1.117" reporte117
+
+# --- Transacciones (TRX_ACUM_DIA): un zip por día liquidado ---
+candidatos "$ESPEJO_SONDA/Transacciones" -name 'TRX_ACUM_DIA*.zip' \
+  | subir transacciones "$ESPEJO_SONDA/Transacciones" transacciones
 
 # --- Velocidades ---
 VEL="$ESPEJO_DTPM/VELOCIDADES"
