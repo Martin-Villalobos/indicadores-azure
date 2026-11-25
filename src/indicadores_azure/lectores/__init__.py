@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from . import anexo1, anexo3, exclusiones, flota, velocidades
+from . import anexo1, anexo3, exclusiones, flota, transacciones, velocidades
 
 LECTORES: dict[str, ModuleType] = {
     "anexo1": anexo1,
@@ -24,4 +24,5 @@ LECTORES: dict[str, ModuleType] = {
     "velocidades": velocidades,
     "exclusiones": exclusiones,
     "flota": flota,
+    "transacciones": transacciones,
 }
